@@ -69,7 +69,7 @@ function PrompterPage() {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-ls-black px-6">
         <p className="text-ls-white">Roteiro não encontrado</p>
-        <Link to="/" className="text-sm text-ls-blue">
+        <Link to="/editor" className="text-sm text-ls-blue">
           Voltar ao editor →
         </Link>
       </div>
@@ -204,7 +204,7 @@ function Prompter({ script }: { script: Script }) {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {})
     }
-    navigate({ to: '/' })
+    navigate({ to: '/editor' })
   }, [navigate])
 
   /* Gestos de dois dedos: pinch ajusta a fonte, deslize vertical ajusta a

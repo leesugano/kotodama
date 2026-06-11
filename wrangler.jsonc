@@ -11,16 +11,26 @@
   "observability": {
     "enabled": true
   },
-  "upload_source_maps": true
+  "upload_source_maps": true,
+  "vars": {
+    "BETTER_AUTH_URL": "https://kotodama.leesugano.workers.dev"
+  },
   /**
-   * Bindings v2 (planejados, ainda não usados na v1):
-   * D1 para sync de roteiros e KV para sessões.
-   * Descomentar e preencher os IDs quando a v2 começar.
+   * D1: usuários e sessões do Better Auth.
+   * Na v2 o mesmo banco recebe o sync de roteiros.
    */
-  // "d1_databases": [
-  //   { "binding": "DB", "database_name": "kotodama", "database_id": "<DATABASE_ID>" }
-  // ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kotodama",
+      "database_id": "e8b82d22-3635-4a09-897b-64b671665392",
+      "migrations_dir": "./migrations"
+    }
+  ]
+  /**
+   * KV para a v2 (compartilhar roteiro por link, TTL):
+   */
   // "kv_namespaces": [
-  //   { "binding": "SESSIONS", "id": "<NAMESPACE_ID>" }
+  //   { "binding": "SHARES", "id": "<NAMESPACE_ID>" }
   // ]
 }

@@ -1,0 +1,8 @@
+# Copie para .dev.vars e preencha. Gere o secret com: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+
+# Opcionais: login social. Deixe vazio para usar apenas email e senha.
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
