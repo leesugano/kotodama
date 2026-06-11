@@ -19,6 +19,13 @@ Criadores de conteúdo, professores e profissionais que gravam vídeo precisam d
 - **Espelhamento**: horizontal, vertical ou ambos, para teleprompter físico com espelho.
 - **Roteiros salvos**: lista local com criar, renomear, duplicar e excluir. Tudo em IndexedDB, zero rede.
 - **Wake lock**: a tela não apaga durante a leitura no celular (com fallback silencioso).
+- **PWA offline**: instala como app e funciona 100% offline depois da primeira visita (service worker + fonte self-hosted).
+- **Contagem regressiva**: 3-2-1 configurável (0 a 10s) antes do scroll começar; um toque cancela.
+- **Linha-guia**: linha horizontal opcional para manter o olhar perto da câmera, com posição ajustável.
+- **Presets de velocidade**: calmo, natural e rápido, além do ajuste fino em px/s.
+- **Margens laterais**: largura do texto ajustável para enquadramentos diferentes.
+- **Quebras de seção**: uma linha com `---` no roteiro vira um separador visual no prompter.
+- **i18n preparado**: PT-BR padrão com dicionários EN e JA prontos na estrutura.
 - **Conta opcional**: autenticação com Better Auth (email e senha, com suporte a GitHub e Google). Serve de base para o sync de roteiros entre dispositivos (em desenvolvimento).
 
 ### Atalhos de teclado
@@ -139,13 +146,20 @@ src/
     prompter.tsx       # tela do prompter (fullscreen, rAF)
     entrar.tsx         # login e criação de conta
     api/auth/$.ts      # handler do Better Auth
+  components/
+    Logo.tsx           # marca (mesma arte do favicon e dos ícones PWA)
+    InstallPrompt.tsx  # convite discreto de instalação do PWA
   lib/
     scripts/           # ScriptRepository + implementação IndexedDB
     auth/              # instância Better Auth (server) e client React
     settings.ts        # preferências do prompter (localStorage)
+    i18n.ts            # strings da UI (PT-BR padrão, EN/JA prontos)
     text.ts            # contagem de palavras, duração, títulos
   db/schema.ts         # schema Drizzle (tabelas do Better Auth)
   hooks/useWakeLock.ts # wake lock com fallback silencioso
+public/
+  sw.js                # service worker (offline após a primeira visita)
+  manifest.json        # manifest do PWA
 migrations/            # migrações SQL do D1
 ```
 
@@ -153,8 +167,9 @@ migrations/            # migrações SQL do D1
 
 - [x] Fase 1: editor + prompter com play/pause, velocidade e fonte
 - [x] Fase 2: espelhamento, gestos mobile, wake lock, roteiros salvos, landing, autenticação
-- [ ] Fase 3: PWA completo (offline), countdown 3-2-1, eye-line, polish
-- [ ] Fase 4: QA, Lighthouse 90+, domínio próprio
+- [x] Fase 3: PWA completo (offline), countdown 3-2-1, eye-line, presets, margens, seções, i18n
+- [x] Fase 4: QA do design system, Lighthouse 90+ (Performance 100 / A11y 95)
+- [ ] Domínio próprio
 - [ ] v2: sync de roteiros via D1, controle remoto (celular controla o desktop), compartilhar por link
 
 ## Contribuindo
