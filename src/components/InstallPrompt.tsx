@@ -1,5 +1,6 @@
 import { Download, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { t } from '../lib/i18n'
 
 const DISMISSED_KEY = 'kotodama:install-dismissed'
 
@@ -9,9 +10,9 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 /**
- * Convite discreto de instalação do PWA: aparece como uma pílula no canto
- * inferior quando o browser dispara beforeinstallprompt. Nunca bloqueia
- * nada e, uma vez dispensado, não volta a aparecer.
+ * Discreet PWA install prompt: shows up as a pill in the bottom corner when
+ * the browser fires beforeinstallprompt. It never blocks anything and, once
+ * dismissed, does not come back.
  */
 export function InstallPrompt() {
   const [installEvent, setInstallEvent] =
@@ -21,7 +22,7 @@ export function InstallPrompt() {
     try {
       if (window.localStorage.getItem(DISMISSED_KEY)) return
     } catch {
-      // storage indisponível: mostra mesmo assim
+      // storage unavailable: show it anyway
     }
     const onPrompt = (e: Event) => {
       e.preventDefault()
@@ -38,7 +39,7 @@ export function InstallPrompt() {
     try {
       window.localStorage.setItem(DISMISSED_KEY, '1')
     } catch {
-      // sem storage: dispensa só nesta sessão
+      // no storage: dismiss for this session only
     }
   }
 
@@ -55,12 +56,12 @@ export function InstallPrompt() {
         className="flex items-center gap-2 rounded-btn px-2 py-1.5 text-sm text-ls-gray-900 transition-colors duration-[140ms] hover:text-ls-blue"
       >
         <Download size={16} strokeWidth={1.5} aria-hidden />
-        Instalar o Kotodama
+        {t('install.cta')}
       </button>
       <button
         type="button"
         onClick={dismiss}
-        aria-label="Dispensar convite de instalação"
+        aria-label={t('install.dismiss')}
         className="rounded-btn p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
       >
         <X size={14} strokeWidth={1.5} aria-hidden />

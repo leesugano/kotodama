@@ -1,19 +1,19 @@
 /*
- * Service worker do Kotodama: app 100% offline após a primeira visita.
+ * Kotodama service worker: the app is 100% offline after the first visit.
  *
- * - install: precacheia o shell (HTML das rotas, manifest, ícones, fonte)
- *   e os assets referenciados em cada HTML (JS/CSS com hash).
- * - navegação: network-first com fallback para o cache (ignora search,
- *   então /prompter?id=x cai no HTML cacheado de /prompter).
- * - assets same-origin: cache-first; /assets/ tem hash no nome, é imutável.
+ * - install: precaches the shell (route HTML, manifest, icons, font) and
+ *   the assets referenced by each HTML (hashed JS/CSS).
+ * - navigation: network-first with cache fallback (search is ignored, so
+ *   /prompter?id=x falls back to the cached /prompter HTML).
+ * - same-origin assets: cache-first; /assets/ files are hashed, immutable.
  */
-const CACHE = 'kotodama-v1'
+const CACHE = 'kotodama-v2'
 
 const SHELL = [
   '/',
   '/editor',
   '/prompter',
-  '/entrar',
+  '/sign-in',
   '/manifest.json',
   '/favicon.svg',
   '/favicon.ico',
@@ -41,7 +41,7 @@ async function precache() {
         }
         await cache.put(url, response)
       } catch {
-        // offline ou rota indisponível durante o install: segue sem ela
+        // offline or route unavailable during install: continue without it
       }
     }),
   )
@@ -52,7 +52,7 @@ async function precache() {
         const response = await fetch(url)
         if (response.ok) await cache.put(url, response)
       } catch {
-        // asset será cacheado em runtime na primeira navegação
+        // the asset gets cached at runtime on the first navigation
       }
     }),
   )
@@ -116,7 +116,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
-  /* auth e APIs nunca passam pelo cache */
+  /* auth and APIs never go through the cache */
   if (url.pathname.startsWith('/api/')) return
 
   if (request.mode === 'navigate') {

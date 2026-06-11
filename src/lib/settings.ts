@@ -1,20 +1,29 @@
+import { getLocale } from './i18n'
+import { defaultVoiceLang } from './voice'
+
 export interface PrompterSettings {
-  /** Velocidade do scroll em px/s */
+  /** Scroll speed in px/s */
   speed: number
-  /** Tamanho da fonte do prompter em px */
+  /** Prompter font size in px */
   fontSize: number
-  /** Espelhamento horizontal (teleprompter físico com espelho) */
+  /** Horizontal mirroring (physical teleprompter rigs with a mirror) */
   mirrorX: boolean
-  /** Espelhamento vertical */
+  /** Vertical mirroring */
   mirrorY: boolean
-  /** Segundos de contagem regressiva antes do scroll iniciar (0 desliga) */
+  /** Countdown seconds before the scroll starts (0 turns it off) */
   countdown: number
-  /** Linha-guia horizontal para manter o olhar perto da câmera */
+  /** Horizontal eye line to keep the gaze near the camera */
   eyeLine: boolean
-  /** Posição vertical da linha-guia em % da altura da tela */
+  /** Vertical position of the eye line as % of the screen height */
   eyeLinePosition: number
-  /** Margem lateral do texto em % da largura da tela */
+  /** Side margin of the text as % of the screen width */
   margin: number
+  /** Camera self-view behind the text */
+  camera: boolean
+  /** Voice tracking: speech recognition drives the scroll */
+  voice: boolean
+  /** BCP-47 language tag used by speech recognition */
+  voiceLang: string
 }
 
 export const SPEED_MIN = 10
@@ -30,7 +39,7 @@ export const EYELINE_MAX = 85
 export const MARGIN_MIN = 0
 export const MARGIN_MAX = 25
 
-/** Presets nomeados de velocidade: nomes vêm do i18n (preset.calm etc.) */
+/** Named speed presets: labels come from i18n (preset.calm etc.) */
 export const SPEED_PRESETS = [
   { id: 'calm', speed: 40 },
   { id: 'natural', speed: 60 },
@@ -46,6 +55,9 @@ export const DEFAULT_SETTINGS: PrompterSettings = {
   eyeLine: false,
   eyeLinePosition: 33,
   margin: 7,
+  camera: false,
+  voice: false,
+  voiceLang: 'en-US',
 }
 
 const SETTINGS_KEY = 'kotodama:settings'
@@ -82,9 +94,14 @@ function numberOr(fallback: number, value: unknown): number {
 
 export function loadSettings(): PrompterSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
+  /* With nothing stored, the speech language follows the UI locale */
+  const localeDefaults = {
+    ...DEFAULT_SETTINGS,
+    voiceLang: defaultVoiceLang(getLocale()),
+  }
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY)
-    if (!raw) return DEFAULT_SETTINGS
+    if (!raw) return localeDefaults
     const parsed = JSON.parse(raw) as Partial<PrompterSettings>
     return {
       speed: clampSpeed(numberOr(DEFAULT_SETTINGS.speed, parsed.speed)),
@@ -101,9 +118,15 @@ export function loadSettings(): PrompterSettings {
         numberOr(DEFAULT_SETTINGS.eyeLinePosition, parsed.eyeLinePosition),
       ),
       margin: clampMargin(numberOr(DEFAULT_SETTINGS.margin, parsed.margin)),
+      camera: parsed.camera === true,
+      voice: parsed.voice === true,
+      voiceLang:
+        typeof parsed.voiceLang === 'string' && parsed.voiceLang.length > 0
+          ? parsed.voiceLang
+          : localeDefaults.voiceLang,
     }
   } catch {
-    return DEFAULT_SETTINGS
+    return localeDefaults
   }
 }
 
@@ -112,7 +135,7 @@ export function saveSettings(settings: PrompterSettings): void {
   try {
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   } catch {
-    // storage indisponível (modo privado): segue sem persistir
+    // storage unavailable (private mode): continue without persisting
   }
 }
 
@@ -130,6 +153,6 @@ export function saveCurrentScriptId(id: string): void {
   try {
     window.localStorage.setItem(CURRENT_SCRIPT_KEY, id)
   } catch {
-    // storage indisponível: segue sem persistir
+    // storage unavailable: continue without persisting
   }
 }

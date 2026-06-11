@@ -1,7 +1,7 @@
 {
   "name": "Kotodama",
   "short_name": "Kotodama",
-  "description": "Teleprompter profissional na web. Cola o texto, aperta play, grava.",
+  "description": "Professional teleprompter for the web. Paste your text, press play, record.",
   "id": "/",
   "start_url": "/editor",
   "scope": "/",
@@ -9,7 +9,7 @@
   "orientation": "any",
   "theme_color": "#000000",
   "background_color": "#000000",
-  "lang": "pt-BR",
+  "lang": "en",
   "icons": [
     {
       "src": "/icons/icon-192.png",

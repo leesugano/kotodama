@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
-/* Schema do Better Auth (sqlite/D1): user, session, account, verification */
+/* Better Auth schema (sqlite/D1): user, session, account, verification */
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey(),

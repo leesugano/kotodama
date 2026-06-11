@@ -4,7 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { drizzle } from 'drizzle-orm/d1'
 import * as schema from '../../db/schema'
 
-/* Vars e secrets opcionais chegam fora do tipo gerado pelo wrangler */
+/* Optional vars and secrets arrive outside the wrangler-generated type */
 interface AuthEnv {
   DB: D1Database
   BETTER_AUTH_URL?: string
@@ -17,7 +17,7 @@ interface AuthEnv {
 
 const authEnv = env as unknown as AuthEnv
 
-/* Providers sociais entram só quando as credenciais existem no ambiente */
+/* Social providers are enabled only when credentials exist in the environment */
 function socialProviders() {
   const providers: Record<string, { clientId: string; clientSecret: string }> =
     {}

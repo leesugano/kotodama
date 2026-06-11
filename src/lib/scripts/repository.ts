@@ -3,7 +3,7 @@ import type { ScriptRepository } from './types'
 
 let instance: ScriptRepository | null = null
 
-/** Implementação atual: IndexedDB. Chamar apenas no client. */
+/** Current implementation: IndexedDB. Call on the client only. */
 export function getScriptRepository(): ScriptRepository {
   if (!instance) {
     instance = new IndexedDBScriptRepository()

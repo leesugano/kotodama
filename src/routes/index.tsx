@@ -6,8 +6,10 @@ import {
   Github,
   Keyboard,
   Lock,
+  Mic,
   MonitorSmartphone,
   ShieldCheck,
+  Video,
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { Logo } from '../components/Logo'
@@ -16,66 +18,80 @@ export const Route = createFileRoute('/')({ component: LandingPage })
 
 const GITHUB_URL = 'https://github.com/leesugano/kotodama'
 
-const DEMO_TEXT = `Olá, eu sou o Kotodama. Cola o teu roteiro, aperta play e grava. O texto rola na velocidade do teu ritmo de fala, com a fonte do tamanho que os teus olhos pedem. Pausa com um toque, retoma do mesmo ponto, espelha para rigs com espelho. Tudo no navegador, tudo no teu dispositivo.`
+const DEMO_TEXT = `Hi, I am Kotodama. Paste your script, press play and record. The text scrolls at the pace of your speech, with a font size your eyes will thank you for. Pause with a tap, resume from the same spot, mirror for rigs with a beam splitter. All in the browser, all on your device.`
 
 const FEATURES = [
   {
-    icon: Gauge,
-    title: 'Velocidade em tempo real',
+    icon: Mic,
+    title: 'Voice tracking',
     description:
-      'Ajuste a rolagem enquanto fala, de 10 a 200 px/s, sem salto de posição. O scroll usa delta time e fica suave em qualquer tela, 60Hz ou 120Hz.',
+      'Turn on the mic and the script follows your voice: speech recognition matches what you say and scrolls to keep you on the right line, in dozens of languages.',
+  },
+  {
+    icon: Video,
+    title: 'Camera self-view',
+    description:
+      'See yourself behind the text while you read. The front camera becomes the prompter background so you can check your framing without leaving the script.',
+  },
+  {
+    icon: Gauge,
+    title: 'Real-time speed',
+    description:
+      'Adjust the scroll while you speak, from 10 to 200 px/s, with no position jump. The scroll uses delta time and stays smooth on any screen, 60Hz or 120Hz.',
   },
   {
     icon: FlipHorizontal2,
-    title: 'Espelhamento para rigs',
+    title: 'Mirroring for rigs',
     description:
-      'Horizontal, vertical ou ambos. Para quem usa teleprompter físico com espelho na frente da câmera.',
+      'Horizontal, vertical or both. For physical teleprompter rigs with a mirror in front of the camera.',
   },
   {
     icon: ShieldCheck,
-    title: 'Seu texto é seu',
+    title: 'Your text is yours',
     description:
-      'Roteiros ficam no seu dispositivo, em IndexedDB. Nada vai para a nuvem, nada é rastreado, nenhum anúncio cobre o texto.',
+      'Scripts stay on your device, in IndexedDB. Nothing goes to the cloud, nothing is tracked, no ad covers the text.',
   },
   {
     icon: Keyboard,
-    title: 'Atalhos e gestos',
+    title: 'Shortcuts and gestures',
     description:
-      'Espaço para play, setas para velocidade, M para espelhar. No celular: tap para pausar, pinch para a fonte, dois dedos para a velocidade.',
+      'Space to play, arrows for speed, M to mirror. On mobile: tap to pause, pinch for font size, two fingers for speed.',
   },
   {
     icon: MonitorSmartphone,
-    title: 'Celular e desktop',
+    title: 'Mobile and desktop',
     description:
-      'Fullscreen na vertical e na horizontal, com a tela sempre acesa durante a leitura graças ao wake lock.',
+      'Fullscreen in portrait and landscape, with the screen always on during reading thanks to the wake lock.',
   },
   {
     icon: Github,
-    title: 'Open source e gratuito',
+    title: 'Open source and free',
     description:
-      'Código aberto sob licença MIT. Sem paywall, sem plano premium, sem pegadinha. Contribuições são bem-vindas.',
+      'Open code under the MIT license. No paywall, no premium plan, no catch. Contributions are welcome.',
   },
 ]
 
 const SHORTCUTS: Array<[string, string]> = [
-  ['Espaço', 'Play / pause'],
-  ['↑ / ↓', 'Velocidade + / -'],
-  ['+ / -', 'Fonte + / -'],
-  ['M', 'Espelhar horizontal'],
-  ['R', 'Voltar ao início'],
+  ['Space', 'Play / pause'],
+  ['↑ / ↓', 'Speed + / -'],
+  ['+ / -', 'Font + / -'],
+  ['V', 'Voice tracking'],
+  ['C', 'Camera'],
+  ['M', 'Mirror horizontally'],
+  ['R', 'Back to start'],
   ['F', 'Fullscreen'],
-  ['Esc', 'Sair do prompter'],
+  ['Esc', 'Exit prompter'],
 ]
 
 const GESTURES: Array<[string, string]> = [
   ['Tap', 'Play / pause'],
-  ['Pinch', 'Tamanho da fonte'],
-  ['Dois dedos na vertical', 'Velocidade'],
-  ['Toque na tela', 'Mostrar controles'],
+  ['Pinch', 'Font size'],
+  ['Two fingers vertically', 'Speed'],
+  ['Touch the screen', 'Show controls'],
 ]
 
 function LandingPage() {
-  /* Reveal ao rolar: cada [data-reveal] aparece quando entra na viewport */
+  /* Reveal on scroll: each [data-reveal] appears when it enters the viewport */
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]')
     const observer = new IntersectionObserver(
@@ -107,37 +123,37 @@ function LandingPage() {
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <a
-              href="#como-funciona"
+              href="#how-it-works"
               className="hidden rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 sm:block"
             >
-              Como funciona
+              How it works
             </a>
             <a
-              href="#atalhos"
+              href="#shortcuts"
               className="hidden rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 sm:block"
             >
-              Atalhos
+              Shortcuts
             </a>
             <a
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label="Ver no GitHub"
+              aria-label="View on GitHub"
               className="rounded-btn p-2 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
             >
               <Github size={18} strokeWidth={1.5} aria-hidden />
             </a>
             <Link
-              to="/entrar"
+              to="/sign-in"
               className="rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
             >
-              Entrar
+              Sign in
             </Link>
             <Link
               to="/editor"
               className="rounded-btn bg-ls-blue px-4 py-2 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed"
             >
-              Abrir editor
+              Open editor
             </Link>
           </div>
         </nav>
@@ -151,20 +167,20 @@ function LandingPage() {
               className="rise text-sm font-medium text-ls-blue"
               style={{ animationDelay: '0ms' }}
             >
-              Open source, gratuito, sem conta obrigatória
+              Open source, free, no account required
             </p>
             <h1
               className="display rise mt-4 text-5xl leading-[1.05] text-ls-black sm:text-6xl"
               style={{ animationDelay: '80ms' }}
             >
-              O teleprompter que vive no seu navegador
+              The teleprompter that lives in your browser
             </h1>
             <p
               className="rise mx-auto mt-6 max-w-[560px] text-lg leading-relaxed text-ls-gray-500"
               style={{ animationDelay: '160ms' }}
             >
-              Cola o texto, aperta play, grava. Funciona no celular e no
-              desktop, sem instalar nada e sem anúncio cobrindo o roteiro.
+              Paste the text, press play, record. Works on mobile and desktop,
+              nothing to install and no ad covering your script.
             </p>
             <div
               className="rise mt-9 flex flex-wrap items-center justify-center gap-3"
@@ -174,7 +190,7 @@ function LandingPage() {
                 to="/editor"
                 className="inline-flex items-center gap-2 rounded-btn bg-ls-blue px-6 py-3 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed"
               >
-                Começar agora
+                Start now
                 <ArrowRight size={16} strokeWidth={1.5} aria-hidden />
               </Link>
               <a
@@ -184,12 +200,12 @@ function LandingPage() {
                 className="inline-flex items-center gap-2 rounded-btn border border-ls-line px-6 py-3 text-sm font-medium text-ls-gray-900 transition-colors duration-[140ms] hover:bg-ls-gray-50"
               >
                 <Github size={16} strokeWidth={1.5} aria-hidden />
-                Ver no GitHub
+                View on GitHub
               </a>
             </div>
           </div>
 
-          {/* Demo do prompter */}
+          {/* Prompter demo */}
           <div
             className="rise mx-auto mt-16 max-w-[820px]"
             style={{ animationDelay: '320ms' }}
@@ -215,34 +231,34 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Como funciona */}
-        <section id="como-funciona" className="border-t border-ls-line">
+        {/* How it works */}
+        <section id="how-it-works" className="border-t border-ls-line">
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
               <h2 className="display text-3xl text-ls-black sm:text-4xl">
-                Do texto ao take em três passos
+                From text to take in three steps
               </h2>
               <p className="mt-3 max-w-[520px] text-ls-gray-500">
-                A ideia é simples: do primeiro acesso ao texto rolando na tela
-                em menos de 30 segundos.
+                The idea is simple: from first visit to text scrolling on screen
+                in under 30 seconds.
               </p>
             </div>
             <ol className="mt-12 grid gap-8 sm:grid-cols-3">
               {[
                 [
                   '1',
-                  'Cole o roteiro',
-                  'Abra o editor e cole o texto. Ele é salvo automaticamente no seu dispositivo enquanto você digita.',
+                  'Paste the script',
+                  'Open the editor and paste your text. It is saved automatically on your device while you type.',
                 ],
                 [
                   '2',
-                  'Ajuste ao seu ritmo',
-                  'Velocidade, tamanho da fonte e espelhamento. Veja a duração estimada antes de gravar.',
+                  'Tune it to your pace',
+                  'Speed, font size and mirroring. See the estimated duration before recording.',
                 ],
                 [
                   '3',
-                  'Grave com confiança',
-                  'Fullscreen preto, olhar perto da câmera, pausa e retomada sem perder o ponto.',
+                  'Record with confidence',
+                  'Black fullscreen, gaze near the camera, pause and resume without losing your place.',
                 ],
               ].map(([step, title, description]) => (
                 <li key={step} className="reveal" data-reveal>
@@ -266,11 +282,11 @@ function LandingPage() {
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
               <h2 className="display text-3xl text-ls-black sm:text-4xl">
-                Feito para quem grava de verdade
+                Built for people who actually record
               </h2>
               <p className="mt-3 max-w-[520px] text-ls-gray-500">
-                Criadores de conteúdo, professores, apresentadores. Tudo que um
-                teleprompter precisa ter, nada do que atrapalha.
+                Content creators, teachers, presenters. Everything a
+                teleprompter needs, nothing that gets in the way.
               </p>
             </div>
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -298,19 +314,19 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Atalhos */}
-        <section id="atalhos" className="border-t border-ls-line">
+        {/* Shortcuts */}
+        <section id="shortcuts" className="border-t border-ls-line">
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
               <h2 className="display text-3xl text-ls-black sm:text-4xl">
-                Controle total, sem tirar o olho do texto
+                Full control without taking your eyes off the text
               </h2>
             </div>
             <div className="mt-12 grid gap-10 md:grid-cols-2">
               <div className="reveal" data-reveal>
                 <h3 className="flex items-center gap-2 text-sm font-medium text-ls-gray-500">
                   <Keyboard size={16} strokeWidth={1.5} aria-hidden />
-                  No desktop
+                  On desktop
                 </h3>
                 <ul className="mt-4 divide-y divide-ls-line border-y border-ls-line">
                   {SHORTCUTS.map(([key, action]) => (
@@ -329,7 +345,7 @@ function LandingPage() {
               <div className="reveal" data-reveal>
                 <h3 className="flex items-center gap-2 text-sm font-medium text-ls-gray-500">
                   <MonitorSmartphone size={16} strokeWidth={1.5} aria-hidden />
-                  No celular
+                  On mobile
                 </h3>
                 <ul className="mt-4 divide-y divide-ls-line border-y border-ls-line">
                   {GESTURES.map(([gesture, action]) => (
@@ -349,7 +365,7 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Privacidade e open source */}
+        {/* Privacy and open source */}
         <section className="border-t border-ls-line">
           <div className="mx-auto max-w-[760px] px-6 py-20 text-center">
             <div className="reveal" data-reveal>
@@ -360,21 +376,20 @@ function LandingPage() {
                 aria-hidden
               />
               <h2 className="display mt-4 text-3xl text-ls-black sm:text-4xl">
-                Privado por arquitetura
+                Private by architecture
               </h2>
               <p className="mx-auto mt-4 max-w-[560px] leading-relaxed text-ls-gray-500">
-                O Kotodama não tem banco de roteiros na nuvem: o que você
-                escreve fica no armazenamento do seu navegador. A conta é
-                opcional e serve apenas para, no futuro, sincronizar roteiros
-                entre dispositivos. O código é aberto para qualquer pessoa
-                auditar.
+                Kotodama has no script database in the cloud: what you write
+                stays in your browser storage. The account is optional and
+                exists only to sync scripts across devices in the future. The
+                code is open for anyone to audit.
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Link
                   to="/editor"
                   className="inline-flex items-center gap-2 rounded-btn bg-ls-blue px-6 py-3 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed"
                 >
-                  Experimentar o Kotodama
+                  Try Kotodama
                   <ArrowRight size={16} strokeWidth={1.5} aria-hidden />
                 </Link>
               </div>
@@ -386,7 +401,7 @@ function LandingPage() {
       <footer className="border-t border-ls-line">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-8">
           <p className="text-sm text-ls-gray-500">
-            Kotodama. Feito por Lee Sugano, aberto para todos.
+            Kotodama. Made by Lee Sugano, open to everyone.
           </p>
           <div className="flex items-center gap-4">
             <a
@@ -397,7 +412,7 @@ function LandingPage() {
             >
               GitHub
             </a>
-            <span className="text-sm text-ls-gray-500">Licença MIT</span>
+            <span className="text-sm text-ls-gray-500">MIT license</span>
           </div>
         </div>
       </footer>

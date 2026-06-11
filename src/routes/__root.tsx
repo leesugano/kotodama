@@ -15,7 +15,7 @@ export const Route = createRootRoute({
       {
         name: 'description',
         content:
-          'Teleprompter profissional na web. Cola o texto, aperta play, grava. Funciona offline no celular e no desktop.',
+          'Professional teleprompter for the web. Paste your text, press play, record. Works offline on mobile and desktop.',
       },
       { name: 'theme-color', content: '#000000' },
       { name: 'mobile-web-app-capable', content: 'yes' },
@@ -36,7 +36,7 @@ export const Route = createRootRoute({
 const CANONICAL_HOST = 'kotodama.leesugano.com'
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  /* Domínio canônico: o workers.dev segue no ar, mas manda para cá */
+  /* Canonical domain: workers.dev stays up but redirects here */
   useEffect(() => {
     if (window.location.hostname === 'kotodama.leesugano.workers.dev') {
       window.location.replace(
@@ -45,7 +45,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  /* PWA: registra o service worker só em produção, sem bloquear o load */
+  /* PWA: register the service worker in production only, without blocking the load */
   useEffect(() => {
     if (!import.meta.env.PROD) return
     if (!('serviceWorker' in navigator)) return
@@ -53,7 +53,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <html lang="pt-BR">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>

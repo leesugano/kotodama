@@ -1,3 +1,5 @@
+import { getLocale, t } from './i18n'
+
 export const DEFAULT_WPM = 140
 
 export function countWords(text: string): number {
@@ -6,7 +8,7 @@ export function countWords(text: string): number {
   return trimmed.split(/\s+/).length
 }
 
-/** Duração estimada de leitura em segundos. */
+/** Estimated reading duration in seconds. */
 export function estimateSeconds(
   words: number,
   wpm: number = DEFAULT_WPM,
@@ -22,31 +24,33 @@ export function formatDuration(totalSeconds: number): string {
   return `${minutes}min ${seconds.toString().padStart(2, '0')}s`
 }
 
-/** Data de modificação amigável para a lista de roteiros. */
+/** Friendly modification date for the script list. */
 export function formatModifiedDate(
   timestamp: number,
   now: number = Date.now(),
 ): string {
   const diffMs = now - timestamp
   const minutes = Math.floor(diffMs / 60000)
-  if (minutes < 1) return 'agora'
-  if (minutes < 60) return `há ${minutes}min`
+  if (minutes < 1) return t('time.now')
+  if (minutes < 60) return t('time.minutesAgo', { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `há ${hours}h`
+  if (hours < 24) return t('time.hoursAgo', { n: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return days === 1 ? 'ontem' : `há ${days} dias`
-  return new Date(timestamp).toLocaleDateString('pt-BR', {
+  if (days < 7) {
+    return days === 1 ? t('time.yesterday') : t('time.daysAgo', { n: days })
+  }
+  return new Date(timestamp).toLocaleDateString(getLocale(), {
     day: '2-digit',
     month: 'short',
   })
 }
 
-/** Título derivado da primeira linha não vazia do roteiro. */
+/** Title derived from the first non-empty line of the script. */
 export function deriveTitle(content: string): string {
   const firstLine = content
     .split('\n')
     .map((line) => line.trim())
     .find((line) => line.length > 0)
-  if (!firstLine) return 'Sem título'
+  if (!firstLine) return t('editor.untitled')
   return firstLine.length > 80 ? `${firstLine.slice(0, 80)}...` : firstLine
 }

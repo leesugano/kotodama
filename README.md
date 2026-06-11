@@ -1,120 +1,133 @@
 # Kotodama
 
-> Teleprompter profissional na web. Cola o texto, aperta play, grava.
+> Professional teleprompter for the web. Paste your text, press play, record.
 
-Kotodama é um teleprompter open source que roda inteiro no navegador. Sem instalar app, sem conta obrigatória, sem anúncio cobrindo o texto. Funciona no celular e no desktop.
+Kotodama is an open source teleprompter that runs entirely in the browser. No app to install, no required account, no ad covering your text. Works on mobile and desktop.
 
-**Produção:** https://kotodama.leesugano.com
+**Production:** https://kotodama.leesugano.com
 
-## Por que existe
+## Why it exists
 
-Criadores de conteúdo, professores e profissionais que gravam vídeo precisam de um teleprompter simples. As opções atuais são apps pagos, sites lentos cheios de anúncios ou ferramentas que não funcionam offline. O Kotodama resolve isso com uma regra: do primeiro acesso ao texto rolando na tela em menos de 30 segundos.
+Content creators, teachers and professionals who record video need a simple teleprompter. The current options are paid apps, slow ad-ridden websites or tools that do not work offline. Kotodama solves this with one rule: from first visit to text scrolling on screen in under 30 seconds.
 
-## Funcionalidades
+## Features
 
-- **Editor com auto-save**: cole ou digite o roteiro; ele é salvo automaticamente no dispositivo enquanto você escreve, com contador de palavras e duração estimada (140 wpm).
-- **Scroll suave e preciso**: rolagem via `requestAnimationFrame` com delta time. A velocidade em px/s independe do framerate; fica igual em telas de 60Hz e 120Hz.
-- **Velocidade em tempo real**: de 10 a 200 px/s, ajustável durante a rolagem sem salto de posição.
-- **Fonte ajustável**: de 24 a 96px, persiste entre sessões.
-- **Espelhamento**: horizontal, vertical ou ambos, para teleprompter físico com espelho.
-- **Roteiros salvos**: lista local com criar, renomear, duplicar e excluir. Tudo em IndexedDB, zero rede.
-- **Wake lock**: a tela não apaga durante a leitura no celular (com fallback silencioso).
-- **PWA offline**: instala como app e funciona 100% offline depois da primeira visita (service worker + fonte self-hosted).
-- **Contagem regressiva**: 3-2-1 configurável (0 a 10s) antes do scroll começar; um toque cancela.
-- **Linha-guia**: linha horizontal opcional para manter o olhar perto da câmera, com posição ajustável.
-- **Presets de velocidade**: calmo, natural e rápido, além do ajuste fino em px/s.
-- **Margens laterais**: largura do texto ajustável para enquadramentos diferentes.
-- **Quebras de seção**: uma linha com `---` no roteiro vira um separador visual no prompter.
-- **i18n preparado**: PT-BR padrão com dicionários EN e JA prontos na estrutura.
-- **Conta opcional**: autenticação com Better Auth (email e senha, com suporte a GitHub e Google). Serve de base para o sync de roteiros entre dispositivos (em desenvolvimento).
+- **Voice tracking**: turn on the mic and the script follows your voice. Speech recognition (Web Speech API) matches what you say against the script and scrolls to keep you on the right line, with 50+ languages to choose from. Misread or skipped words are forgiven by a lookahead matcher.
+- **Camera self-view**: put your own camera behind the text. The front camera becomes the prompter background (mirrored, under a dark scrim) so you can check your framing while you read.
+- **Editor with auto-save**: paste or type the script; it is saved automatically on the device while you write, with word count and estimated duration (140 wpm).
+- **Smooth, precise scrolling**: `requestAnimationFrame` with delta time. Speed in px/s is framerate-independent; it is the same on 60Hz and 120Hz screens.
+- **Real-time speed**: from 10 to 200 px/s, adjustable while scrolling with no position jump.
+- **Adjustable font**: from 24 to 96px, persisted across sessions.
+- **Mirroring**: horizontal, vertical or both, for physical teleprompter rigs with a mirror.
+- **Saved scripts**: local list with create, rename, duplicate and delete. All in IndexedDB, zero network.
+- **Wake lock**: the screen stays on while reading on mobile (with a silent fallback).
+- **Offline PWA**: installs as an app and works 100% offline after the first visit (service worker + self-hosted font).
+- **Countdown**: configurable 3-2-1 (0 to 10s) before the scroll starts; a tap cancels it.
+- **Eye line**: optional horizontal guide to keep the gaze near the camera, with adjustable position.
+- **Speed presets**: calm, natural and fast, plus fine adjustment in px/s.
+- **Side margins**: adjustable text width for different framings.
+- **Section breaks**: a line with `---` in the script becomes a visual separator in the prompter.
+- **i18n**: English by default, with complete PT-BR and JA dictionaries.
+- **Optional account**: authentication with Better Auth (email and password, with GitHub and Google support). Foundation for script sync across devices (in development).
 
-### Atalhos de teclado
+### Keyboard shortcuts
 
-| Tecla | Ação |
+| Key | Action |
 |---|---|
-| Espaço | Play / pause |
-| ↑ / ↓ | Velocidade + / - |
-| + / - | Fonte + / - |
-| M | Espelhar horizontal |
-| R | Voltar ao início |
+| Space | Play / pause |
+| ↑ / ↓ | Speed + / - |
+| + / - | Font + / - |
+| V | Voice tracking |
+| C | Camera self-view |
+| M | Mirror horizontally |
+| R | Back to start |
 | F | Fullscreen |
-| Esc | Sair do prompter |
+| Esc | Exit prompter |
 
-### Gestos no celular
+### Mobile gestures
 
-| Gesto | Ação |
+| Gesture | Action |
 |---|---|
 | Tap | Play / pause |
-| Pinch | Tamanho da fonte |
-| Dois dedos na vertical | Velocidade |
-| Toque | Mostrar controles |
+| Pinch | Font size |
+| Two fingers vertically | Speed |
+| Touch | Show controls |
+
+## How voice tracking works
+
+1. The script is tokenized (lowercased, no punctuation or diacritics; CJK text is split per character so Japanese and Chinese work without word boundaries).
+2. While you speak, the Web Speech API emits interim transcripts. New tokens are diffed per utterance so nothing is matched twice.
+3. A greedy matcher advances a cursor through the script inside a small lookahead window — misrecognized or skipped words never get the prompter stuck.
+4. The scroll eases toward the position that puts the last matched word on the reading line (the eye line, when enabled).
+
+Voice tracking uses the browser's speech recognition engine (Chrome, Edge and Safari; not available in Firefox). Audio is processed by the browser/OS engine, not by Kotodama servers — Kotodama has none.
 
 ## Stack
 
-| Camada | Tecnologia |
+| Layer | Technology |
 |---|---|
 | Framework | [TanStack Start](https://tanstack.com/start) + React + TypeScript |
-| Runtime e deploy | [Cloudflare Workers](https://workers.cloudflare.com) (assets estáticos + SSR) |
-| Estilo | Tailwind CSS v4 com design tokens próprios |
-| Lint e format | [Biome](https://biomejs.dev) |
-| Autenticação | [Better Auth](https://better-auth.com) + Cloudflare D1 + Drizzle ORM |
-| Roteiros | IndexedDB atrás da interface `ScriptRepository` |
-| Preferências | localStorage |
+| Runtime and deploy | [Cloudflare Workers](https://workers.cloudflare.com) (static assets + SSR) |
+| Styling | Tailwind CSS v4 with custom design tokens |
+| Lint and format | [Biome](https://biomejs.dev) |
+| Authentication | [Better Auth](https://better-auth.com) + Cloudflare D1 + Drizzle ORM |
+| Scripts | IndexedDB behind the `ScriptRepository` interface |
+| Preferences | localStorage |
 
-### Decisões de arquitetura
+### Architecture decisions
 
-- **Client-heavy**: o Worker serve os assets e a shell SSR; toda a lógica do prompter roda no client.
-- **Storage abstraído**: todo acesso a roteiros passa pela interface `ScriptRepository` (`src/lib/scripts/types.ts`). A v1 usa IndexedDB; o sync via D1 entra sem refatorar o app.
-- **Local-first e privado**: os roteiros nunca saem do dispositivo. A conta é opcional e hoje guarda apenas usuário e sessão.
+- **Client-heavy**: the Worker serves the assets and the SSR shell; all prompter logic runs on the client.
+- **Abstracted storage**: all script access goes through the `ScriptRepository` interface (`src/lib/scripts/types.ts`). v1 uses IndexedDB; D1 sync lands without refactoring the app.
+- **Local-first and private**: scripts never leave the device. The account is optional and currently stores only user and session.
 
-## Rodando localmente
+## Running locally
 
-Pré-requisitos: Node 20+ e uma conta Cloudflare (gratuita) para o D1.
+Prerequisites: Node 20+ and a (free) Cloudflare account for D1.
 
 ```bash
 git clone https://github.com/leesugano/kotodama.git
 cd kotodama
 npm install
 
-# secret local do Better Auth
+# local Better Auth secret
 cp .dev.vars.example .dev.vars
-# preencha BETTER_AUTH_SECRET (gere com: openssl rand -base64 32)
+# fill in BETTER_AUTH_SECRET (generate with: openssl rand -base64 32)
 
-# banco local do D1 (usuários e sessões)
+# local D1 database (users and sessions)
 npx wrangler d1 migrations apply kotodama --local
 
 npm run dev
 ```
 
-O app sobe em `http://localhost:3000`.
+The app runs at `http://localhost:3000`.
 
 ### Scripts
 
 ```bash
-npm run dev        # dev server com Vite
+npm run dev        # dev server with Vite
 npm run lint       # biome check
 npm run format     # biome check --write
 npm run test       # vitest
-npm run build      # build de produção
+npm run build      # production build
 npm run deploy     # build + wrangler deploy
-npm run cf-typegen # regenera tipos dos bindings
+npm run cf-typegen # regenerate binding types
 ```
 
-## Deploy no Cloudflare Workers
+## Deploying to Cloudflare Workers
 
-1. Autentique o Wrangler: `npx wrangler login` (ou exporte `CLOUDFLARE_API_TOKEN`).
-2. Crie o banco D1 e ajuste o `database_id` no `wrangler.jsonc`:
+1. Authenticate Wrangler: `npx wrangler login` (or export `CLOUDFLARE_API_TOKEN`).
+2. Create the D1 database and set `database_id` in `wrangler.jsonc`:
 
 ```bash
 npx wrangler d1 create kotodama
 npx wrangler d1 migrations apply kotodama --remote
 ```
 
-3. Configure o secret e a URL pública:
+3. Configure the secret and the public URL:
 
 ```bash
 npx wrangler secret put BETTER_AUTH_SECRET
-# edite BETTER_AUTH_URL em wrangler.jsonc com o seu domínio
+# edit BETTER_AUTH_URL in wrangler.jsonc with your domain
 ```
 
 4. Deploy:
@@ -123,9 +136,9 @@ npx wrangler secret put BETTER_AUTH_SECRET
 npm run deploy
 ```
 
-### Login social (opcional)
+### Social login (optional)
 
-O login com GitHub e Google é ativado automaticamente quando as credenciais existem no ambiente. Crie os OAuth apps nos respectivos consoles com callback `https://SEU_DOMINIO/api/auth/callback/github` (ou `google`) e configure:
+GitHub and Google login are enabled automatically when the credentials exist in the environment. Create the OAuth apps in the respective consoles with callback `https://YOUR_DOMAIN/api/auth/callback/github` (or `google`) and configure:
 
 ```bash
 npx wrangler secret put GITHUB_CLIENT_ID
@@ -134,53 +147,58 @@ npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 ```
 
-Para desenvolvimento local, use as mesmas chaves no `.dev.vars`.
+For local development, use the same keys in `.dev.vars`.
 
-## Estrutura do projeto
+## Project structure
 
 ```
 src/
   routes/
     index.tsx          # landing page
-    editor.tsx         # editor com lista de roteiros
-    prompter.tsx       # tela do prompter (fullscreen, rAF)
-    entrar.tsx         # login e criação de conta
-    api/auth/$.ts      # handler do Better Auth
+    editor.tsx         # editor with script list
+    prompter.tsx       # prompter screen (fullscreen, rAF, voice, camera)
+    sign-in.tsx        # sign in and account creation
+    api/auth/$.ts      # Better Auth handler
   components/
-    Logo.tsx           # marca (mesma arte do favicon e dos ícones PWA)
-    InstallPrompt.tsx  # convite discreto de instalação do PWA
+    Logo.tsx           # brand mark (same artwork as favicon and PWA icons)
+    InstallPrompt.tsx  # discreet PWA install prompt
   lib/
-    scripts/           # ScriptRepository + implementação IndexedDB
-    auth/              # instância Better Auth (server) e client React
-    settings.ts        # preferências do prompter (localStorage)
-    i18n.ts            # strings da UI (PT-BR padrão, EN/JA prontos)
-    text.ts            # contagem de palavras, duração, títulos
-  db/schema.ts         # schema Drizzle (tabelas do Better Auth)
-  hooks/useWakeLock.ts # wake lock com fallback silencioso
+    scripts/           # ScriptRepository + IndexedDB implementation
+    auth/              # Better Auth instance (server) and React client
+    settings.ts        # prompter preferences (localStorage)
+    i18n.ts            # UI strings (EN default, PT-BR/JA dictionaries)
+    text.ts            # word count, duration, titles
+    voice.ts           # voice tracking: tokenizer, matcher, language list
+  db/schema.ts         # Drizzle schema (Better Auth tables)
+  hooks/
+    useWakeLock.ts     # wake lock with silent fallback
+    useVoiceTracking.ts# Web Speech API lifecycle (continuous recognition)
+    useCamera.ts       # front camera self-view stream
 public/
-  sw.js                # service worker (offline após a primeira visita)
-  manifest.json        # manifest do PWA
-migrations/            # migrações SQL do D1
+  sw.js                # service worker (offline after the first visit)
+  manifest.json        # PWA manifest
+migrations/            # D1 SQL migrations
 ```
 
 ## Roadmap
 
-- [x] Fase 1: editor + prompter com play/pause, velocidade e fonte
-- [x] Fase 2: espelhamento, gestos mobile, wake lock, roteiros salvos, landing, autenticação
-- [x] Fase 3: PWA completo (offline), countdown 3-2-1, eye-line, presets, margens, seções, i18n
-- [x] Fase 4: QA do design system, Lighthouse 90+ (Performance 100 / A11y 95)
-- [x] Domínio próprio: kotodama.leesugano.com
-- [ ] v2: sync de roteiros via D1, controle remoto (celular controla o desktop), compartilhar por link
+- [x] Phase 1: editor + prompter with play/pause, speed and font
+- [x] Phase 2: mirroring, mobile gestures, wake lock, saved scripts, landing, authentication
+- [x] Phase 3: full PWA (offline), 3-2-1 countdown, eye line, presets, margins, sections, i18n
+- [x] Phase 4: design system QA, Lighthouse 90+ (Performance 100 / A11y 95)
+- [x] Custom domain: kotodama.leesugano.com
+- [x] Voice tracking (speech recognition drives the scroll) and camera self-view
+- [ ] v2: script sync via D1, remote control (phone controls the desktop), share by link
 
-## Contribuindo
+## Contributing
 
-Contribuições são bem-vindas.
+Contributions are welcome.
 
-1. Abra uma issue descrevendo o problema ou a proposta antes de PRs grandes.
-2. Fork, branch a partir de `main`, commits pequenos e descritivos em inglês.
-3. Rode `npm run lint` e `npm run build` antes de abrir o PR.
-4. Siga o design system do projeto: tokens em `src/styles.css`, sem cores fora da paleta, sentence case na UI.
+1. Open an issue describing the problem or proposal before large PRs.
+2. Fork, branch from `main`, small descriptive commits in English.
+3. Run `npm run lint` and `npm run build` before opening the PR.
+4. Follow the project design system: tokens in `src/styles.css`, no colors outside the palette, sentence case in the UI.
 
-## Licença
+## License
 
-[MIT](./LICENSE). Feito por Lee Sugano, aberto para todos.
+[MIT](./LICENSE). Made by Lee Sugano, open to everyone.

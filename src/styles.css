@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Inter variável (300-500) self-hosted: PWA offline real, sem request externo */
+/* Self-hosted variable Inter (300-500): real offline PWA, no external request */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -13,7 +13,7 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Design System Lee Sugano v1.0: tokens base */
+/* Lee Sugano Design System v1.0: base tokens */
 :root {
   --ls-blue: #007aff;
   --ls-blue-pressed: #0051d5;
@@ -24,7 +24,7 @@
   --ls-white: #ffffff;
   --ls-line-light: #e5e5e7;
 
-  /* Tokens semânticos */
+  /* Semantic tokens */
   --bg-0: var(--ls-white);
   --bg-1: var(--ls-gray-50);
   --fg-0: var(--ls-gray-900);
@@ -33,7 +33,7 @@
   --accent: var(--ls-blue);
   --accent-pressed: var(--ls-blue-pressed);
 
-  /* Movimento */
+  /* Motion */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 140ms;
   --dur-base: 220ms;
@@ -76,7 +76,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Títulos display: Light 300, tracking apertado, nunca bold */
+/* Display headings: Light 300, tight tracking, never bold */
 .display {
   font-weight: 300;
   letter-spacing: -0.03em;
@@ -86,7 +86,7 @@ body {
   transition: opacity var(--dur-base) var(--ease-out);
 }
 
-/* Entradas da landing: subir e aparecer, sem bounce */
+/* Landing entrances: rise and fade in, no bounce */
 @keyframes rise-up {
   from {
     opacity: 0;
@@ -102,7 +102,7 @@ body {
   animation: rise-up var(--dur-slow) var(--ease-out) both;
 }
 
-/* Reveal ao rolar: ativado por IntersectionObserver */
+/* Reveal on scroll: activated by IntersectionObserver */
 .reveal {
   opacity: 0;
   transform: translateY(16px);
@@ -116,7 +116,7 @@ body {
   transform: none;
 }
 
-/* Contagem regressiva do prompter: cada número entra firme, sem bounce */
+/* Prompter countdown: each number lands firmly, no bounce */
 @keyframes countdown-pop-in {
   from {
     opacity: 0;
@@ -132,7 +132,7 @@ body {
   animation: countdown-pop-in var(--dur-base) var(--ease-out) both;
 }
 
-/* Demo do prompter na landing: loop continuo de scroll */
+/* Prompter demo on the landing: continuous scroll loop */
 @keyframes demo-scroll {
   from {
     transform: translateY(0);
@@ -150,9 +150,9 @@ body {
   *,
   *::before,
   *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: override global exigido para respeitar reduced motion */
+    /* biome-ignore lint/complexity/noImportantStyles: global override required to respect reduced motion */
     animation-duration: 0.01ms !important;
-    /* biome-ignore lint/complexity/noImportantStyles: override global exigido para respeitar reduced motion */
+    /* biome-ignore lint/complexity/noImportantStyles: global override required to respect reduced motion */
     transition-duration: 0.01ms !important;
   }
 }

@@ -1,6 +1,6 @@
 /**
- * Marca do Kotodama: três linhas de texto num prompter, com a linha
- * ativa em --ls-blue. Mesma arte do favicon e dos ícones PWA.
+ * Kotodama mark: three lines of text on a prompter, with the active line
+ * in --ls-blue. Same artwork as the favicon and the PWA icons.
  */
 export function Logo({
   size = 20,

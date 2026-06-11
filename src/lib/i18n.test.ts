@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { getLocale, t } from './i18n'
 
 describe('i18n', () => {
-  it('usa pt-BR como locale padrão fora do browser', () => {
-    expect(getLocale()).toBe('pt-BR')
+  it('uses English as the default locale outside the browser', () => {
+    expect(getLocale()).toBe('en')
   })
 
-  it('resolve strings em pt-BR por padrão', () => {
-    expect(t('editor.start')).toBe('Iniciar prompter')
-    expect(t('prompter.notFound')).toBe('Roteiro não encontrado')
-    expect(t('settings.countdown')).toBe('Contagem regressiva')
+  it('resolves English strings by default', () => {
+    expect(t('editor.start')).toBe('Start prompter')
+    expect(t('prompter.notFound')).toBe('Script not found')
+    expect(t('settings.countdown')).toBe('Countdown')
+  })
+
+  it('interpolates parameters', () => {
+    expect(t('time.minutesAgo', { n: 5 })).toBe('5min ago')
+    expect(t('time.daysAgo', { n: 3 })).toBe('3 days ago')
   })
 })

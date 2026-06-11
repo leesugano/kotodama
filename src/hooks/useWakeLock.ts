@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 
 /**
- * Mantém a tela acesa enquanto o componente está montado.
- * Fallback silencioso: browsers sem Wake Lock API seguem normalmente.
+ * Keeps the screen awake while the component is mounted.
+ * Silent fallback: browsers without the Wake Lock API continue normally.
  */
 export function useWakeLock(): void {
   useEffect(() => {
@@ -19,11 +19,11 @@ export function useWakeLock(): void {
           sentinel = await navigator.wakeLock.request('screen')
         }
       } catch {
-        // sem suporte ou sem permissão: segue sem wake lock
+        // unsupported or not allowed: continue without the wake lock
       }
     }
 
-    /* O lock é liberado pelo sistema ao trocar de aba; readquire ao voltar */
+    /* The system releases the lock when switching tabs; reacquire on return */
     const onVisibility = () => {
       if (document.visibilityState === 'visible') request()
     }

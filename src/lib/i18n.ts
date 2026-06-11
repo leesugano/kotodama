@@ -1,73 +1,17 @@
 /**
- * i18n do Kotodama: PT-BR é o padrão e a fonte de verdade das chaves.
- * EN e JA cobrem a UI do app (editor + prompter); o que faltar cai no PT-BR.
+ * Kotodama i18n: English is the default locale and the source of truth for
+ * keys. PT-BR and JA cover the app UI (editor + prompter); missing keys fall
+ * back to English.
  *
- * O locale só muda quando gravado explicitamente em localStorage
- * (kotodama:locale) — sem auto-detect por enquanto, para o HTML do SSR
- * e o da hidratação serem sempre idênticos.
+ * The locale only changes when explicitly stored in localStorage
+ * (kotodama:locale) — no auto-detect for now, so the SSR HTML and the
+ * hydration HTML are always identical.
  */
-export type Locale = 'pt-BR' | 'en' | 'ja'
+export type Locale = 'en' | 'pt-BR' | 'ja'
 
 const LOCALE_KEY = 'kotodama:locale'
 
-const ptBR = {
-  'editor.scripts': 'Roteiros',
-  'editor.newScript': 'Novo roteiro',
-  'editor.empty':
-    'Nenhum roteiro ainda. Comece a escrever e o roteiro é salvo automaticamente.',
-  'editor.deleteConfirm': 'Excluir este roteiro?',
-  'editor.delete': 'Excluir',
-  'editor.cancel': 'Cancelar',
-  'editor.rename': 'Renomear',
-  'editor.duplicate': 'Duplicar',
-  'editor.newTitle': 'Novo título do roteiro',
-  'editor.confirmTitle': 'Confirmar título',
-  'editor.openList': 'Abrir lista de roteiros',
-  'editor.closeList': 'Fechar lista de roteiros',
-  'editor.close': 'Fechar',
-  'editor.signIn': 'Entrar',
-  'editor.signOut': 'Sair',
-  'editor.placeholder': 'Cole ou digite seu roteiro',
-  'editor.scriptLabel': 'Roteiro',
-  'editor.word': 'palavra',
-  'editor.words': 'palavras',
-  'editor.wpmSuffix': 'a 140 wpm',
-  'editor.startHint': 'Comece colando seu texto',
-  'editor.start': 'Iniciar prompter',
-  'prompter.notFound': 'Roteiro não encontrado',
-  'prompter.backToEditor': 'Voltar ao editor →',
-  'prompter.controls': 'Controles do prompter',
-  'prompter.restart': 'Voltar ao início',
-  'prompter.play': 'Reproduzir',
-  'prompter.pause': 'Pausar',
-  'prompter.space': 'espaço',
-  'prompter.speedDown': 'Diminuir velocidade',
-  'prompter.speedDownHint': 'seta para baixo',
-  'prompter.speedUp': 'Aumentar velocidade',
-  'prompter.speedUpHint': 'seta para cima',
-  'prompter.speedLabel': 'Velocidade do scroll',
-  'prompter.fontDown': 'Diminuir fonte',
-  'prompter.fontUp': 'Aumentar fonte',
-  'prompter.mirrorH': 'Espelhar horizontal',
-  'prompter.mirrorV': 'Espelhar vertical',
-  'prompter.fullscreen': 'Tela cheia',
-  'prompter.exitFullscreen': 'Sair de tela cheia',
-  'prompter.exit': 'Sair do prompter',
-  'prompter.settings': 'Ajustes',
-  'settings.presets': 'Velocidade',
-  'settings.countdown': 'Contagem regressiva',
-  'settings.countdownOff': 'Desligada',
-  'settings.eyeLine': 'Linha-guia',
-  'settings.eyeLinePosition': 'Posição da linha-guia',
-  'settings.margin': 'Margens laterais',
-  'preset.calm': 'Calmo',
-  'preset.natural': 'Natural',
-  'preset.fast': 'Rápido',
-} as const
-
-export type MessageKey = keyof typeof ptBR
-
-const en: Partial<Record<MessageKey, string>> = {
+const en = {
   'editor.scripts': 'Scripts',
   'editor.newScript': 'New script',
   'editor.empty':
@@ -91,6 +35,15 @@ const en: Partial<Record<MessageKey, string>> = {
   'editor.wpmSuffix': 'at 140 wpm',
   'editor.startHint': 'Start by pasting your text',
   'editor.start': 'Start prompter',
+  'editor.untitled': 'Untitled',
+  'editor.copySuffix': '(copy)',
+  'install.cta': 'Install Kotodama',
+  'install.dismiss': 'Dismiss install prompt',
+  'time.now': 'now',
+  'time.minutesAgo': '{n}min ago',
+  'time.hoursAgo': '{n}h ago',
+  'time.yesterday': 'yesterday',
+  'time.daysAgo': '{n} days ago',
   'prompter.notFound': 'Script not found',
   'prompter.backToEditor': 'Back to editor →',
   'prompter.controls': 'Prompter controls',
@@ -111,15 +64,95 @@ const en: Partial<Record<MessageKey, string>> = {
   'prompter.exitFullscreen': 'Exit fullscreen',
   'prompter.exit': 'Exit prompter',
   'prompter.settings': 'Settings',
+  'prompter.voice': 'Voice tracking',
+  'prompter.camera': 'Camera',
+  'prompter.micDenied': 'Microphone access was denied',
+  'prompter.cameraDenied': 'Camera access was denied',
   'settings.presets': 'Speed',
   'settings.countdown': 'Countdown',
   'settings.countdownOff': 'Off',
   'settings.eyeLine': 'Eye line',
   'settings.eyeLinePosition': 'Eye line position',
   'settings.margin': 'Side margins',
+  'settings.voiceLang': 'Speech language',
+  'settings.voiceUnsupported':
+    'Speech recognition is not supported in this browser',
   'preset.calm': 'Calm',
   'preset.natural': 'Natural',
   'preset.fast': 'Fast',
+} as const
+
+export type MessageKey = keyof typeof en
+
+const ptBR: Partial<Record<MessageKey, string>> = {
+  'editor.scripts': 'Roteiros',
+  'editor.newScript': 'Novo roteiro',
+  'editor.empty':
+    'Nenhum roteiro ainda. Comece a escrever e o roteiro é salvo automaticamente.',
+  'editor.deleteConfirm': 'Excluir este roteiro?',
+  'editor.delete': 'Excluir',
+  'editor.cancel': 'Cancelar',
+  'editor.rename': 'Renomear',
+  'editor.duplicate': 'Duplicar',
+  'editor.newTitle': 'Novo título do roteiro',
+  'editor.confirmTitle': 'Confirmar título',
+  'editor.openList': 'Abrir lista de roteiros',
+  'editor.closeList': 'Fechar lista de roteiros',
+  'editor.close': 'Fechar',
+  'editor.signIn': 'Entrar',
+  'editor.signOut': 'Sair',
+  'editor.placeholder': 'Cole ou digite seu roteiro',
+  'editor.scriptLabel': 'Roteiro',
+  'editor.word': 'palavra',
+  'editor.words': 'palavras',
+  'editor.wpmSuffix': 'a 140 wpm',
+  'editor.startHint': 'Comece colando seu texto',
+  'editor.start': 'Iniciar prompter',
+  'editor.untitled': 'Sem título',
+  'editor.copySuffix': '(cópia)',
+  'install.cta': 'Instalar o Kotodama',
+  'install.dismiss': 'Dispensar convite de instalação',
+  'time.now': 'agora',
+  'time.minutesAgo': 'há {n}min',
+  'time.hoursAgo': 'há {n}h',
+  'time.yesterday': 'ontem',
+  'time.daysAgo': 'há {n} dias',
+  'prompter.notFound': 'Roteiro não encontrado',
+  'prompter.backToEditor': 'Voltar ao editor →',
+  'prompter.controls': 'Controles do prompter',
+  'prompter.restart': 'Voltar ao início',
+  'prompter.play': 'Reproduzir',
+  'prompter.pause': 'Pausar',
+  'prompter.space': 'espaço',
+  'prompter.speedDown': 'Diminuir velocidade',
+  'prompter.speedDownHint': 'seta para baixo',
+  'prompter.speedUp': 'Aumentar velocidade',
+  'prompter.speedUpHint': 'seta para cima',
+  'prompter.speedLabel': 'Velocidade do scroll',
+  'prompter.fontDown': 'Diminuir fonte',
+  'prompter.fontUp': 'Aumentar fonte',
+  'prompter.mirrorH': 'Espelhar horizontal',
+  'prompter.mirrorV': 'Espelhar vertical',
+  'prompter.fullscreen': 'Tela cheia',
+  'prompter.exitFullscreen': 'Sair de tela cheia',
+  'prompter.exit': 'Sair do prompter',
+  'prompter.settings': 'Ajustes',
+  'prompter.voice': 'Acompanhar voz',
+  'prompter.camera': 'Câmera',
+  'prompter.micDenied': 'O acesso ao microfone foi negado',
+  'prompter.cameraDenied': 'O acesso à câmera foi negado',
+  'settings.presets': 'Velocidade',
+  'settings.countdown': 'Contagem regressiva',
+  'settings.countdownOff': 'Desligada',
+  'settings.eyeLine': 'Linha-guia',
+  'settings.eyeLinePosition': 'Posição da linha-guia',
+  'settings.margin': 'Margens laterais',
+  'settings.voiceLang': 'Idioma da fala',
+  'settings.voiceUnsupported':
+    'O reconhecimento de voz não é suportado neste navegador',
+  'preset.calm': 'Calmo',
+  'preset.natural': 'Natural',
+  'preset.fast': 'Rápido',
 }
 
 const ja: Partial<Record<MessageKey, string>> = {
@@ -145,6 +178,15 @@ const ja: Partial<Record<MessageKey, string>> = {
   'editor.wpmSuffix': '（140 wpm）',
   'editor.startHint': 'まずテキストを貼り付けてください',
   'editor.start': 'プロンプターを開始',
+  'editor.untitled': '無題',
+  'editor.copySuffix': '（コピー）',
+  'install.cta': 'Kotodamaをインストール',
+  'install.dismiss': 'インストールの案内を閉じる',
+  'time.now': 'たった今',
+  'time.minutesAgo': '{n}分前',
+  'time.hoursAgo': '{n}時間前',
+  'time.yesterday': '昨日',
+  'time.daysAgo': '{n}日前',
   'prompter.notFound': '原稿が見つかりません',
   'prompter.backToEditor': 'エディターに戻る →',
   'prompter.controls': 'プロンプターの操作',
@@ -165,32 +207,38 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prompter.exitFullscreen': '全画面を終了',
   'prompter.exit': 'プロンプターを終了',
   'prompter.settings': '設定',
+  'prompter.voice': '音声に追従',
+  'prompter.camera': 'カメラ',
+  'prompter.micDenied': 'マイクへのアクセスが拒否されました',
+  'prompter.cameraDenied': 'カメラへのアクセスが拒否されました',
   'settings.presets': '速度',
   'settings.countdown': 'カウントダウン',
   'settings.countdownOff': 'オフ',
   'settings.eyeLine': 'アイライン',
   'settings.eyeLinePosition': 'アイラインの位置',
   'settings.margin': '左右の余白',
+  'settings.voiceLang': '音声の言語',
+  'settings.voiceUnsupported': 'このブラウザは音声認識に対応していません',
   'preset.calm': 'ゆっくり',
   'preset.natural': '自然',
   'preset.fast': '速い',
 }
 
 const dictionaries: Record<Locale, Partial<Record<MessageKey, string>>> = {
-  'pt-BR': ptBR,
   en,
+  'pt-BR': ptBR,
   ja,
 }
 
 export function getLocale(): Locale {
-  if (typeof window === 'undefined') return 'pt-BR'
+  if (typeof window === 'undefined') return 'en'
   try {
     const stored = window.localStorage.getItem(LOCALE_KEY)
     if (stored === 'en' || stored === 'ja' || stored === 'pt-BR') return stored
   } catch {
-    // storage indisponível: usa o padrão
+    // storage unavailable: use the default
   }
-  return 'pt-BR'
+  return 'en'
 }
 
 export function setLocale(locale: Locale): void {
@@ -198,10 +246,19 @@ export function setLocale(locale: Locale): void {
   try {
     window.localStorage.setItem(LOCALE_KEY, locale)
   } catch {
-    // storage indisponível: segue sem persistir
+    // storage unavailable: continue without persisting
   }
 }
 
-export function t(key: MessageKey): string {
-  return dictionaries[getLocale()][key] ?? ptBR[key]
+export function t(
+  key: MessageKey,
+  params?: Record<string, string | number>,
+): string {
+  let message = dictionaries[getLocale()][key] ?? en[key]
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      message = message.replaceAll(`{${name}}`, String(value))
+    }
+  }
+  return message
 }

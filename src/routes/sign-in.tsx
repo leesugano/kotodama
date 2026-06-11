@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Logo } from '../components/Logo'
 import { authClient } from '../lib/auth/client'
 
-export const Route = createFileRoute('/entrar')({ component: SignInPage })
+export const Route = createFileRoute('/sign-in')({ component: SignInPage })
 
 type Mode = 'signin' | 'signup'
 
@@ -29,14 +29,14 @@ function SignInPage() {
       if (result.error) {
         setError(
           mode === 'signin'
-            ? 'Não foi possível entrar. Confira o email e a senha.'
-            : 'Não foi possível criar a conta. Tente outro email ou uma senha com pelo menos 8 caracteres.',
+            ? 'Could not sign in. Check your email and password.'
+            : 'Could not create the account. Try another email or a password with at least 8 characters.',
         )
       } else {
         navigate({ to: '/editor' })
       }
     } catch {
-      setError('Falha de conexão. Tente novamente.')
+      setError('Connection failed. Try again.')
     } finally {
       setLoading(false)
     }
@@ -58,17 +58,17 @@ function SignInPage() {
       <main className="flex flex-1 items-center justify-center px-6 pb-20">
         <div className="w-full max-w-[380px]">
           <h1 className="display text-3xl text-ls-black">
-            {mode === 'signin' ? 'Entrar' : 'Criar conta'}
+            {mode === 'signin' ? 'Sign in' : 'Create account'}
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-ls-gray-500">
-            A conta é opcional: o Kotodama funciona sem ela. No futuro, ela vai
-            sincronizar seus roteiros entre dispositivos.
+            An account is optional: Kotodama works without one. In the future it
+            will sync your scripts across devices.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">
             {mode === 'signup' && (
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm text-ls-gray-900">Nome</span>
+                <span className="text-sm text-ls-gray-900">Name</span>
                 <input
                   type="text"
                   value={name}
@@ -91,7 +91,7 @@ function SignInPage() {
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm text-ls-gray-900">Senha</span>
+              <span className="text-sm text-ls-gray-900">Password</span>
               <input
                 type="password"
                 value={password}
@@ -123,10 +123,10 @@ function SignInPage() {
               className="mt-2 rounded-btn bg-ls-blue px-5 py-2.5 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed disabled:bg-ls-gray-50 disabled:text-ls-gray-500"
             >
               {loading
-                ? 'Aguarde'
+                ? 'Please wait'
                 : mode === 'signin'
-                  ? 'Entrar'
-                  : 'Criar conta'}
+                  ? 'Sign in'
+                  : 'Create account'}
             </button>
           </form>
 
@@ -140,14 +140,14 @@ function SignInPage() {
               className="text-sm text-ls-blue transition-colors duration-[140ms] hover:text-ls-blue-pressed"
             >
               {mode === 'signin'
-                ? 'Não tem conta? Criar conta'
-                : 'Já tem conta? Entrar'}
+                ? 'No account? Create one'
+                : 'Already have an account? Sign in'}
             </button>
             <Link
               to="/editor"
               className="text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
             >
-              Seguir sem conta →
+              Continue without an account →
             </Link>
           </div>
         </div>

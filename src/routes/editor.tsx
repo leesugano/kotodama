@@ -79,7 +79,7 @@ function EditorPage() {
     }
   }, [])
 
-  /** Grava o roteiro atual e mantém a lista em ordem de modificação */
+  /** Persists the current script and keeps the list sorted by modification */
   const persist = useCallback(async (text: string): Promise<string> => {
     let id = currentIdRef.current
     if (!id) {
@@ -105,7 +105,7 @@ function EditorPage() {
     return id
   }, [])
 
-  /** Salva imediatamente qualquer edição pendente antes de trocar de roteiro */
+  /** Immediately saves any pending edit before switching scripts */
   const flushPending = useCallback(async () => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
@@ -154,7 +154,7 @@ function EditorPage() {
     await flushPending()
     const script: Script = {
       id: crypto.randomUUID(),
-      title: 'Sem título',
+      title: t('editor.untitled'),
       content: '',
       customTitle: false,
       createdAt: Date.now(),
@@ -178,7 +178,7 @@ function EditorPage() {
     const copy: Script = {
       ...source,
       id: crypto.randomUUID(),
-      title: `${source.title} (cópia)`,
+      title: `${source.title} ${t('editor.copySuffix')}`,
       customTitle: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -315,7 +315,7 @@ function EditorPage() {
                       if (e.key === 'Enter') commitRename(script)
                       if (e.key === 'Escape') setRenamingId(null)
                     }}
-                    // biome-ignore lint/a11y/noAutofocus: o campo acabou de ser aberto pela ação de renomear
+                    // biome-ignore lint/a11y/noAutofocus: the field was just opened by the rename action
                     autoFocus
                     aria-label={t('editor.newTitle')}
                     className="w-full rounded-input border border-ls-line px-2 py-1.5 text-sm text-ls-gray-900 outline-none focus:border-ls-blue"
@@ -452,7 +452,7 @@ function EditorPage() {
               </>
             ) : (
               <Link
-                to="/entrar"
+                to="/sign-in"
                 className="rounded-btn px-3 py-1.5 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
               >
                 {t('editor.signIn')}

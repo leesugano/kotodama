@@ -13,8 +13,8 @@
   },
   "upload_source_maps": true,
   /**
-   * Domínio canônico. O workers.dev continua ativo para links e PWAs
-   * antigos, mas o app redireciona para cá no client (__root.tsx).
+   * Canonical domain. workers.dev stays active for old links and PWAs,
+   * but the app redirects here on the client (__root.tsx).
    */
   "workers_dev": true,
   "routes": [
@@ -27,8 +27,8 @@
     "BETTER_AUTH_URL": "https://kotodama.leesugano.com"
   },
   /**
-   * D1: usuários e sessões do Better Auth.
-   * Na v2 o mesmo banco recebe o sync de roteiros.
+   * D1: Better Auth users and sessions.
+   * In v2 the same database receives script sync.
    */
   "d1_databases": [
     {
@@ -39,7 +39,7 @@
     }
   ]
   /**
-   * KV para a v2 (compartilhar roteiro por link, TTL):
+   * KV for v2 (share a script by link, TTL):
    */
   // "kv_namespaces": [
   //   { "binding": "SHARES", "id": "<NAMESPACE_ID>" }
