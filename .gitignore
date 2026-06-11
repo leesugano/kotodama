@@ -19,3 +19,6 @@ todos.json
 # Artefatos de teste manual
 .playwright-mcp
 prompter.png
+
+# Claude Code — memória de projeto pessoal (gerida pela skill save-memory)
+.claude/project-memory.md
