@@ -41,28 +41,42 @@ export function isSpeechRecognitionSupported(): boolean {
   return getSpeechRecognition() !== null
 }
 
+export interface UtteranceEvent {
+  /** Every token of the utterance recognized so far, oldest first */
+  tokens: string[]
+  /** The engine committed this utterance; its text will not change again */
+  isFinal: boolean
+  /** First event of a new utterance (or of a restarted engine) */
+  isNew: boolean
+}
+
 /**
- * Runs continuous speech recognition while `active`, emitting newly spoken
- * tokens through `onTokens`. Interim results are diffed per utterance so the
- * same words are never emitted twice; the engine is restarted automatically
- * when it stops after a silence.
+ * Runs continuous speech recognition while `active`. Each event carries the
+ * FULL token list of the current utterance, so the consumer can re-match it
+ * from a stable baseline — interim transcripts get revised by the engine
+ * ("brow" becomes "brown"), and incremental diffs would lose those fixes.
+ * The engine restarts automatically after the silences that end it.
  */
 export function useVoiceTracking({
   active,
   lang,
-  onTokens,
+  onUtterance,
   onPermissionDenied,
+  onUnavailable,
 }: {
   active: boolean
   lang: string
-  onTokens: (tokens: string[]) => void
+  onUtterance: (event: UtteranceEvent) => void
   onPermissionDenied: () => void
+  onUnavailable: () => void
 }): void {
   const [supported] = useState(isSpeechRecognitionSupported)
-  const onTokensRef = useRef(onTokens)
+  const onUtteranceRef = useRef(onUtterance)
   const onDeniedRef = useRef(onPermissionDenied)
-  onTokensRef.current = onTokens
+  const onUnavailableRef = useRef(onUnavailable)
+  onUtteranceRef.current = onUtterance
   onDeniedRef.current = onPermissionDenied
+  onUnavailableRef.current = onUnavailable
 
   useEffect(() => {
     if (!active || !supported) return
@@ -74,8 +88,9 @@ export function useVoiceTracking({
        clearly broken (offline, no speech service) instead of looping */
     let consecutiveErrors = 0
     let restartTimer: ReturnType<typeof setTimeout> | null = null
-    /* Tokens already emitted for the utterance currently being recognized */
-    let utterance = { resultIndex: -1, emitted: 0 }
+    /* results index of the utterance currently being recognized; the
+       results list resets on every engine (re)start */
+    let utteranceIndex = -1
     const recognition = new Recognition()
     recognition.lang = lang
     recognition.continuous = true
@@ -85,14 +100,16 @@ export function useVoiceTracking({
       const lastIndex = event.results.length - 1
       const last = event.results[lastIndex]
       if (!last) return
-      if (utterance.resultIndex !== lastIndex) {
-        utterance = { resultIndex: lastIndex, emitted: 0 }
-      }
       consecutiveErrors = 0
+      const isNew = utteranceIndex !== lastIndex
+      utteranceIndex = lastIndex
       const tokens = tokenize(last[0].transcript)
-      if (tokens.length > utterance.emitted) {
-        onTokensRef.current(tokens.slice(utterance.emitted))
-        utterance.emitted = tokens.length
+      if (tokens.length > 0) {
+        onUtteranceRef.current({
+          tokens,
+          isFinal: Boolean(last.isFinal),
+          isNew,
+        })
       }
     }
 
@@ -113,7 +130,13 @@ export function useVoiceTracking({
 
     /* Engines stop after a silence; keep listening while active */
     recognition.onend = () => {
-      if (stopped || consecutiveErrors >= 3) return
+      if (stopped) return
+      if (consecutiveErrors >= 3) {
+        stopped = true
+        onUnavailableRef.current()
+        return
+      }
+      utteranceIndex = -1
       restartTimer = setTimeout(() => {
         try {
           recognition.start()

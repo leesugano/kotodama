@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceCursor,
   buildScriptIndex,
-  defaultVoiceLang,
+  matchSpeechLang,
+  resolveSpeechLang,
   SPEECH_LANGUAGES,
   tokenize,
+  tokensMatch,
 } from './voice'
 
 describe('tokenize', () => {
@@ -61,6 +63,28 @@ describe('buildScriptIndex', () => {
   })
 })
 
+describe('tokensMatch', () => {
+  it('matches exact tokens', () => {
+    expect(tokensMatch('hello', 'hello')).toBe(true)
+    expect(tokensMatch('a', 'a')).toBe(true)
+  })
+
+  it('matches interim prefixes of longer words', () => {
+    expect(tokensMatch('brown', 'brow')).toBe(true)
+    expect(tokensMatch('gravando', 'grava')).toBe(true)
+  })
+
+  it('forgives a single-letter slip in longer words', () => {
+    expect(tokensMatch('quick', 'quack')).toBe(true)
+    expect(tokensMatch('velocidade', 'velocidades')).toBe(true)
+  })
+
+  it('rejects different words', () => {
+    expect(tokensMatch('cat', 'car')).toBe(false)
+    expect(tokensMatch('banana', 'window')).toBe(false)
+  })
+})
+
 describe('advanceCursor', () => {
   const script = tokenize('the quick brown fox jumps over the lazy dog')
 
@@ -69,7 +93,15 @@ describe('advanceCursor', () => {
   })
 
   it('skips misrecognized words and recovers on the next match', () => {
-    expect(advanceCursor(script, 0, ['the', 'quack', 'brown'])).toBe(3)
+    expect(advanceCursor(script, 0, ['the', 'banana', 'brown'])).toBe(3)
+  })
+
+  it('re-matching a revised utterance from its baseline is stable', () => {
+    /* interim "the quick brow" then revised "the quick brown fox" */
+    const first = advanceCursor(script, 0, ['the', 'quick', 'brow'])
+    expect(first).toBe(3)
+    const revised = advanceCursor(script, 0, ['the', 'quick', 'brown', 'fox'])
+    expect(revised).toBe(4)
   })
 
   it('jumps ahead when the speaker skips words', () => {
@@ -97,10 +129,32 @@ describe('SPEECH_LANGUAGES', () => {
   })
 })
 
-describe('defaultVoiceLang', () => {
-  it('maps each UI locale to a speech language', () => {
-    expect(defaultVoiceLang('en')).toBe('en-US')
-    expect(defaultVoiceLang('pt-BR')).toBe('pt-BR')
-    expect(defaultVoiceLang('ja')).toBe('ja-JP')
+describe('matchSpeechLang', () => {
+  it('matches exact BCP-47 tags case-insensitively', () => {
+    expect(matchSpeechLang('pt-br')).toBe('pt-BR')
+    expect(matchSpeechLang('ja-JP')).toBe('ja-JP')
+  })
+
+  it('falls back to a regional default for primary subtags', () => {
+    expect(matchSpeechLang('en')).toBe('en-US')
+    expect(matchSpeechLang('pt')).toBe('pt-BR')
+    expect(matchSpeechLang('es')).toBe('es-ES')
+    expect(matchSpeechLang('de')).toBe('de-DE')
+    expect(matchSpeechLang('ja')).toBe('ja-JP')
+  })
+
+  it('returns null for unknown languages', () => {
+    expect(matchSpeechLang('xx-XX')).toBe(null)
+    expect(matchSpeechLang('')).toBe(null)
+  })
+})
+
+describe('resolveSpeechLang', () => {
+  it('prefers the explicit user choice', () => {
+    expect(resolveSpeechLang('ja-JP')).toBe('ja-JP')
+  })
+
+  it('falls back to en-US outside the browser', () => {
+    expect(resolveSpeechLang('')).toBe('en-US')
   })
 })

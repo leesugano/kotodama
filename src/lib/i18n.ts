@@ -68,6 +68,8 @@ const en = {
   'prompter.camera': 'Camera',
   'prompter.micDenied': 'Microphone access was denied',
   'prompter.cameraDenied': 'Camera access was denied',
+  'prompter.voiceUnavailable':
+    'Voice tracking failed — check your connection and try again',
   'settings.presets': 'Speed',
   'settings.countdown': 'Countdown',
   'settings.countdownOff': 'Off',
@@ -75,6 +77,7 @@ const en = {
   'settings.eyeLinePosition': 'Eye line position',
   'settings.margin': 'Side margins',
   'settings.voiceLang': 'Speech language',
+  'settings.voiceLangAuto': 'Auto — {lang}',
   'settings.voiceUnsupported':
     'Speech recognition is not supported in this browser',
   'preset.calm': 'Calm',
@@ -141,6 +144,8 @@ const ptBR: Partial<Record<MessageKey, string>> = {
   'prompter.camera': 'Câmera',
   'prompter.micDenied': 'O acesso ao microfone foi negado',
   'prompter.cameraDenied': 'O acesso à câmera foi negado',
+  'prompter.voiceUnavailable':
+    'O acompanhamento de voz falhou — verifique a conexão e tente de novo',
   'settings.presets': 'Velocidade',
   'settings.countdown': 'Contagem regressiva',
   'settings.countdownOff': 'Desligada',
@@ -148,6 +153,7 @@ const ptBR: Partial<Record<MessageKey, string>> = {
   'settings.eyeLinePosition': 'Posição da linha-guia',
   'settings.margin': 'Margens laterais',
   'settings.voiceLang': 'Idioma da fala',
+  'settings.voiceLangAuto': 'Automático — {lang}',
   'settings.voiceUnsupported':
     'O reconhecimento de voz não é suportado neste navegador',
   'preset.calm': 'Calmo',
@@ -211,6 +217,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'prompter.camera': 'カメラ',
   'prompter.micDenied': 'マイクへのアクセスが拒否されました',
   'prompter.cameraDenied': 'カメラへのアクセスが拒否されました',
+  'prompter.voiceUnavailable':
+    '音声トラッキングに失敗しました — 接続を確認してもう一度お試しください',
   'settings.presets': '速度',
   'settings.countdown': 'カウントダウン',
   'settings.countdownOff': 'オフ',
@@ -218,6 +226,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'settings.eyeLinePosition': 'アイラインの位置',
   'settings.margin': '左右の余白',
   'settings.voiceLang': '音声の言語',
+  'settings.voiceLangAuto': '自動 — {lang}',
   'settings.voiceUnsupported': 'このブラウザは音声認識に対応していません',
   'preset.calm': 'ゆっくり',
   'preset.natural': '自然',

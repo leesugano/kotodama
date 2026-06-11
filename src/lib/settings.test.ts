@@ -50,7 +50,7 @@ describe('loadSettings', () => {
   it('ships voice and camera off by default', () => {
     expect(DEFAULT_SETTINGS.voice).toBe(false)
     expect(DEFAULT_SETTINGS.camera).toBe(false)
-    expect(DEFAULT_SETTINGS.voiceLang).toBe('en-US')
+    expect(DEFAULT_SETTINGS.speechLang).toBe('')
   })
 })
 

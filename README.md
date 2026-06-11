@@ -12,7 +12,7 @@ Content creators, teachers and professionals who record video need a simple tele
 
 ## Features
 
-- **Voice tracking**: turn on the mic and the script follows your voice. Speech recognition (Web Speech API) matches what you say against the script and scrolls to keep you on the right line, with 50+ languages to choose from. Misread or skipped words are forgiven by a lookahead matcher.
+- **Voice tracking**: turn on the mic and the script follows your voice. Speech recognition (Web Speech API) matches what you say against the script and scrolls to keep you on the right line. The language follows the browser language automatically, with 50+ languages available for manual override. Misread or skipped words are forgiven by a fuzzy lookahead matcher.
 - **Camera self-view**: put your own camera behind the text. The front camera becomes the prompter background (mirrored, under a dark scrim) so you can check your framing while you read.
 - **Editor with auto-save**: paste or type the script; it is saved automatically on the device while you write, with word count and estimated duration (140 wpm).
 - **Smooth, precise scrolling**: `requestAnimationFrame` with delta time. Speed in px/s is framerate-independent; it is the same on 60Hz and 120Hz screens.
@@ -56,9 +56,10 @@ Content creators, teachers and professionals who record video need a simple tele
 ## How voice tracking works
 
 1. The script is tokenized (lowercased, no punctuation or diacritics; CJK text is split per character so Japanese and Chinese work without word boundaries).
-2. While you speak, the Web Speech API emits interim transcripts. New tokens are diffed per utterance so nothing is matched twice.
-3. A greedy matcher advances a cursor through the script inside a small lookahead window — misrecognized or skipped words never get the prompter stuck.
+2. While you speak, the Web Speech API emits interim transcripts. Each utterance is re-matched in full from a stable baseline, so words the engine revises mid-stream ("brow" becoming "brown") are never lost.
+3. A greedy fuzzy matcher (prefixes and single-letter slips count) advances a cursor through the script inside a small lookahead window — misrecognized or skipped words never get the prompter stuck.
 4. The scroll eases toward the position that puts the last matched word on the reading line (the eye line, when enabled).
+5. The recognition language defaults to the browser language (the API cannot detect the spoken language); a manual override lives in the prompter settings. If the engine fails repeatedly (offline, no speech service), a notice appears instead of failing silently.
 
 Voice tracking uses the browser's speech recognition engine (Chrome, Edge and Safari; not available in Firefox). Audio is processed by the browser/OS engine, not by Kotodama servers — Kotodama has none.
 

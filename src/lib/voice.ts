@@ -59,8 +59,50 @@ export function buildScriptIndex(words: string[]): ScriptIndex {
   return { tokens, tokenToWord }
 }
 
+/** True when a and b differ by at most one edit (substitution, insert, delete). */
+function withinOneEdit(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false
+  let i = 0
+  let j = 0
+  let edits = 0
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++
+      j++
+      continue
+    }
+    if (++edits > 1) return false
+    if (a.length > b.length) i++
+    else if (b.length > a.length) j++
+    else {
+      i++
+      j++
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1
+}
+
 /**
- * Advances the cursor through the script tokens given newly spoken tokens.
+ * Forgiving comparison between a script token and a spoken token. Interim
+ * transcripts often carry truncated words ("brow" for "brown") and engines
+ * miss inflections, so prefixes and single-letter slips count as a match.
+ */
+export function tokensMatch(script: string, spoken: string): boolean {
+  if (script === spoken) return true
+  const min = Math.min(script.length, spoken.length)
+  if (
+    min >= 4 &&
+    Math.abs(script.length - spoken.length) <= 3 &&
+    (script.startsWith(spoken) || spoken.startsWith(script))
+  ) {
+    return true
+  }
+  if (min >= 5) return withinOneEdit(script, spoken)
+  return false
+}
+
+/**
+ * Advances the cursor through the script tokens given the spoken tokens.
  * Each spoken token may match anywhere inside the lookahead window; matches
  * move the cursor just past the matched token. Unmatched tokens are ignored.
  */
@@ -74,7 +116,7 @@ export function advanceCursor(
   for (const spoken of spokenTokens) {
     const end = Math.min(position + lookahead, scriptTokens.length)
     for (let i = position; i < end; i++) {
-      if (scriptTokens[i] === spoken) {
+      if (tokensMatch(scriptTokens[i], spoken)) {
         position = i + 1
         break
       }
@@ -145,9 +187,37 @@ export const SPEECH_LANGUAGES: ReadonlyArray<{
   { code: 'zh-TW', label: '中文（繁體）' },
 ]
 
-/** Maps the UI locale to a sensible default speech recognition language. */
-export function defaultVoiceLang(locale: string): string {
-  if (locale === 'pt-BR') return 'pt-BR'
-  if (locale === 'ja') return 'ja-JP'
-  return 'en-US'
+/* Sensible regional defaults when only the primary language subtag matches */
+const PRIMARY_DEFAULTS: Record<string, string> = {
+  en: 'en-US',
+  es: 'es-ES',
+  pt: 'pt-BR',
+  fr: 'fr-FR',
+  zh: 'zh-CN',
+}
+
+/** Finds the closest entry in SPEECH_LANGUAGES for a BCP-47 tag, if any. */
+export function matchSpeechLang(tag: string): string | null {
+  if (!tag) return null
+  const lower = tag.toLowerCase()
+  const exact = SPEECH_LANGUAGES.find((l) => l.code.toLowerCase() === lower)
+  if (exact) return exact.code
+  const primary = lower.split('-')[0]
+  if (PRIMARY_DEFAULTS[primary]) return PRIMARY_DEFAULTS[primary]
+  const prefixed = SPEECH_LANGUAGES.find((l) =>
+    l.code.toLowerCase().startsWith(`${primary}-`),
+  )
+  return prefixed?.code ?? null
+}
+
+/**
+ * Resolves the speech recognition language: an explicit user choice wins;
+ * otherwise the browser language decides (the Web Speech API cannot detect
+ * the spoken language by itself, so this is the closest thing to automatic).
+ */
+export function resolveSpeechLang(stored: string): string {
+  if (stored) return stored
+  const browserTag =
+    typeof navigator !== 'undefined' ? (navigator.language ?? '') : ''
+  return matchSpeechLang(browserTag) ?? 'en-US'
 }

@@ -132,6 +132,21 @@ body {
   animation: countdown-pop-in var(--dur-base) var(--ease-out) both;
 }
 
+/* Live mic indicator: gentle pulse while voice tracking is listening */
+@keyframes voice-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.voice-live {
+  animation: voice-pulse 1.6s var(--ease-out) infinite;
+}
+
 /* Prompter demo on the landing: continuous scroll loop */
 @keyframes demo-scroll {
   from {

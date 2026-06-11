@@ -1,6 +1,3 @@
-import { getLocale } from './i18n'
-import { defaultVoiceLang } from './voice'
-
 export interface PrompterSettings {
   /** Scroll speed in px/s */
   speed: number
@@ -22,8 +19,10 @@ export interface PrompterSettings {
   camera: boolean
   /** Voice tracking: speech recognition drives the scroll */
   voice: boolean
-  /** BCP-47 language tag used by speech recognition */
-  voiceLang: string
+  /** BCP-47 tag for speech recognition; empty string follows the browser.
+   * Named speechLang in storage so legacy voiceLang values (always 'en-US')
+   * are dropped and existing users get the automatic default. */
+  speechLang: string
 }
 
 export const SPEED_MIN = 10
@@ -57,7 +56,7 @@ export const DEFAULT_SETTINGS: PrompterSettings = {
   margin: 7,
   camera: false,
   voice: false,
-  voiceLang: 'en-US',
+  speechLang: '',
 }
 
 const SETTINGS_KEY = 'kotodama:settings'
@@ -94,14 +93,9 @@ function numberOr(fallback: number, value: unknown): number {
 
 export function loadSettings(): PrompterSettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS
-  /* With nothing stored, the speech language follows the UI locale */
-  const localeDefaults = {
-    ...DEFAULT_SETTINGS,
-    voiceLang: defaultVoiceLang(getLocale()),
-  }
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY)
-    if (!raw) return localeDefaults
+    if (!raw) return DEFAULT_SETTINGS
     const parsed = JSON.parse(raw) as Partial<PrompterSettings>
     return {
       speed: clampSpeed(numberOr(DEFAULT_SETTINGS.speed, parsed.speed)),
@@ -120,13 +114,11 @@ export function loadSettings(): PrompterSettings {
       margin: clampMargin(numberOr(DEFAULT_SETTINGS.margin, parsed.margin)),
       camera: parsed.camera === true,
       voice: parsed.voice === true,
-      voiceLang:
-        typeof parsed.voiceLang === 'string' && parsed.voiceLang.length > 0
-          ? parsed.voiceLang
-          : localeDefaults.voiceLang,
+      speechLang:
+        typeof parsed.speechLang === 'string' ? parsed.speechLang : '',
     }
   } catch {
-    return localeDefaults
+    return DEFAULT_SETTINGS
   }
 }
 

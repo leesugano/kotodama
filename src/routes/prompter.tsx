@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useCamera } from '../hooks/useCamera'
 import {
   isSpeechRecognitionSupported,
+  type UtteranceEvent,
   useVoiceTracking,
 } from '../hooks/useVoiceTracking'
 import { useWakeLock } from '../hooks/useWakeLock'
@@ -44,7 +45,12 @@ import {
   SPEED_STEP,
   saveSettings,
 } from '../lib/settings'
-import { advanceCursor, buildScriptIndex, SPEECH_LANGUAGES } from '../lib/voice'
+import {
+  advanceCursor,
+  buildScriptIndex,
+  resolveSpeechLang,
+  SPEECH_LANGUAGES,
+} from '../lib/voice'
 
 export const Route = createFileRoute('/prompter')({
   ssr: false,
@@ -168,7 +174,7 @@ function Prompter({ script }: { script: Script }) {
   const [margin, setMargin] = useState(initialSettings.margin)
   const [camera, setCamera] = useState(initialSettings.camera)
   const [voice, setVoice] = useState(initialSettings.voice)
-  const [voiceLang, setVoiceLang] = useState(initialSettings.voiceLang)
+  const [voiceLang, setVoiceLang] = useState(initialSettings.speechLang)
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -195,7 +201,7 @@ function Prompter({ script }: { script: Script }) {
       margin,
       camera,
       voice,
-      voiceLang,
+      speechLang: voiceLang,
     })
   }, [
     speed,
@@ -245,9 +251,12 @@ function Prompter({ script }: { script: Script }) {
     }
   }, [camera, cameraDenied, showNotice])
 
-  /* Voice tracking state: cursor walks the token list, target is the scroll
-     position that puts the last matched word on the anchor line */
+  /* Voice tracking state: the cursor walks the token list, the target is the
+     scroll position that puts the last matched word on the anchor line. The
+     baseline marks where the current utterance started, so every interim
+     revision of the transcript can be re-matched from a stable point. */
   const voiceCursorRef = useRef(0)
+  const utteranceBaseRef = useRef(0)
   const voiceTargetRef = useRef<number | null>(null)
   const voiceActiveRef = useRef(false)
   const eyeLineRef = useRef(eyeLine)
@@ -285,14 +294,18 @@ function Prompter({ script }: { script: Script }) {
       }
     }
     voiceCursorRef.current = cursor
+    utteranceBaseRef.current = cursor
     voiceTargetRef.current = null
   }, [voiceAnchor])
 
-  const handleSpokenTokens = useCallback(
-    (spoken: string[]) => {
+  const handleUtterance = useCallback(
+    ({ tokens, isFinal, isNew }: UtteranceEvent) => {
       const index = scriptIndexRef.current
-      const next = advanceCursor(index.tokens, voiceCursorRef.current, spoken)
-      if (next === voiceCursorRef.current) return
+      /* A new utterance starts matching from wherever the cursor is now */
+      if (isNew) utteranceBaseRef.current = voiceCursorRef.current
+      const next = advanceCursor(index.tokens, utteranceBaseRef.current, tokens)
+      if (isFinal) utteranceBaseRef.current = next
+      if (next === voiceCursorRef.current || next === 0) return
       voiceCursorRef.current = next
       const wordIndex = index.tokenToWord[next - 1]
       const stage = stageRef.current
@@ -309,6 +322,11 @@ function Prompter({ script }: { script: Script }) {
   )
 
   const voiceListening = voice && voiceSupported && playing
+  /* Explicit choice wins; otherwise the browser language decides */
+  const resolvedVoiceLang = useMemo(
+    () => resolveSpeechLang(voiceLang),
+    [voiceLang],
+  )
 
   useEffect(() => {
     voiceActiveRef.current = voiceListening
@@ -317,11 +335,15 @@ function Prompter({ script }: { script: Script }) {
 
   useVoiceTracking({
     active: voiceListening,
-    lang: voiceLang,
-    onTokens: handleSpokenTokens,
+    lang: resolvedVoiceLang,
+    onUtterance: handleUtterance,
     onPermissionDenied: useCallback(() => {
       setVoice(false)
       showNotice(t('prompter.micDenied'))
+    }, [showNotice]),
+    onUnavailable: useCallback(() => {
+      setVoice(false)
+      showNotice(t('prompter.voiceUnavailable'))
     }, [showNotice]),
   })
 
@@ -447,6 +469,7 @@ function Prompter({ script }: { script: Script }) {
   const restart = useCallback(() => {
     posRef.current = 0
     voiceCursorRef.current = 0
+    utteranceBaseRef.current = 0
     voiceTargetRef.current = null
     showControls()
   }, [showControls])
@@ -933,6 +956,14 @@ function Prompter({ script }: { script: Script }) {
                     onChange={(e) => setVoiceLang(e.target.value)}
                     className="w-36 rounded-btn bg-ls-black/40 px-2 py-1.5 text-xs text-ls-white outline-none"
                   >
+                    <option value="">
+                      {t('settings.voiceLangAuto', {
+                        lang:
+                          SPEECH_LANGUAGES.find(
+                            (l) => l.code === resolveSpeechLang(''),
+                          )?.label ?? resolveSpeechLang(''),
+                      })}
+                    </option>
                     {SPEECH_LANGUAGES.map((language) => (
                       <option key={language.code} value={language.code}>
                         {language.label}
@@ -1052,7 +1083,12 @@ function Prompter({ script }: { script: Script }) {
                 voice ? 'text-ls-blue' : 'text-ls-gray-500'
               }`}
             >
-              <Mic size={20} strokeWidth={1.5} aria-hidden />
+              <Mic
+                size={20}
+                strokeWidth={1.5}
+                aria-hidden
+                className={voiceListening ? 'voice-live' : undefined}
+              />
             </button>
           )}
 
