@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
+  FlipHorizontal2,
+  FlipVertical2,
   Maximize,
   Minimize,
   Minus,
@@ -10,6 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useWakeLock } from '../hooks/useWakeLock'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
 import {
@@ -91,15 +94,19 @@ function Prompter({ script }: { script: Script }) {
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(initialSettings.speed)
   const [fontSize, setFontSize] = useState(initialSettings.fontSize)
+  const [mirrorX, setMirrorX] = useState(initialSettings.mirrorX)
+  const [mirrorY, setMirrorY] = useState(initialSettings.mirrorY)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   playingRef.current = playing
   speedRef.current = speed
 
+  useWakeLock()
+
   useEffect(() => {
-    saveSettings({ speed, fontSize })
-  }, [speed, fontSize])
+    saveSettings({ speed, fontSize, mirrorX, mirrorY })
+  }, [speed, fontSize, mirrorX, mirrorY])
 
   /* Loop de scroll: requestAnimationFrame com delta time, velocidade em px/s
      independente do framerate (60Hz e 120Hz rolam na mesma velocidade real) */
@@ -200,6 +207,92 @@ function Prompter({ script }: { script: Script }) {
     navigate({ to: '/' })
   }, [navigate])
 
+  /* Gestos de dois dedos: pinch ajusta a fonte, deslize vertical ajusta a
+     velocidade. O gesto dominante vence para evitar ajustes acidentais. */
+  const gestureRef = useRef<{
+    startDist: number
+    startMidY: number
+    startFontSize: number
+    startSpeed: number
+  } | null>(null)
+  const lastGestureEndRef = useRef(0)
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage) return
+
+    const measure = (touches: TouchList) => {
+      const [a, b] = [touches[0], touches[1]]
+      return {
+        dist: Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY),
+        midY: (a.clientY + b.clientY) / 2,
+      }
+    }
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const { dist, midY } = measure(e.touches)
+        gestureRef.current = {
+          startDist: dist,
+          startMidY: midY,
+          startFontSize: 0,
+          startSpeed: 0,
+        }
+        /* lê os valores atuais sem recriar os listeners a cada mudança */
+        setFontSize((current) => {
+          if (gestureRef.current) gestureRef.current.startFontSize = current
+          return current
+        })
+        setSpeed((current) => {
+          if (gestureRef.current) gestureRef.current.startSpeed = current
+          return current
+        })
+      }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      const gesture = gestureRef.current
+      if (!gesture || e.touches.length !== 2) return
+      e.preventDefault()
+      const { dist, midY } = measure(e.touches)
+      const distDelta = Math.abs(dist - gesture.startDist)
+      const midDelta = Math.abs(midY - gesture.startMidY)
+      if (distDelta >= midDelta) {
+        const scale = dist / gesture.startDist
+        setFontSize(clampFontSize(Math.round(gesture.startFontSize * scale)))
+      } else {
+        /* deslizar para cima acelera, para baixo desacelera */
+        const deltaY = gesture.startMidY - midY
+        setSpeed(clampSpeed(Math.round(gesture.startSpeed + deltaY * 0.4)))
+      }
+      setControlsVisible(true)
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (gestureRef.current && e.touches.length < 2) {
+        gestureRef.current = null
+        lastGestureEndRef.current = performance.now()
+      }
+    }
+
+    stage.addEventListener('touchstart', onTouchStart, { passive: true })
+    stage.addEventListener('touchmove', onTouchMove, { passive: false })
+    stage.addEventListener('touchend', onTouchEnd, { passive: true })
+    stage.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      stage.removeEventListener('touchstart', onTouchStart)
+      stage.removeEventListener('touchmove', onTouchMove)
+      stage.removeEventListener('touchend', onTouchEnd)
+      stage.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [])
+
+  /* Tap toggla play, mas não logo após um gesto de dois dedos */
+  const handleStageClick = useCallback(() => {
+    if (performance.now() - lastGestureEndRef.current < 400) return
+    togglePlay()
+  }, [togglePlay])
+
   /* Tenta fullscreen ao entrar; falha silenciosa se o browser exigir gesto */
   useEffect(() => {
     document.documentElement.requestFullscreen?.().catch(() => {})
@@ -240,6 +333,11 @@ function Prompter({ script }: { script: Script }) {
         case 'R':
           restart()
           break
+        case 'm':
+        case 'M':
+          setMirrorX((prev) => !prev)
+          showControls()
+          break
         case 'f':
         case 'F':
           toggleFullscreen()
@@ -252,15 +350,23 @@ function Prompter({ script }: { script: Script }) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [togglePlay, changeSpeed, changeFontSize, restart, toggleFullscreen, exit])
+  }, [
+    togglePlay,
+    changeSpeed,
+    changeFontSize,
+    restart,
+    toggleFullscreen,
+    exit,
+    showControls,
+  ])
 
   return (
     /* biome-ignore lint/a11y/useKeyWithClickEvents: o teclado controla via atalhos globais */
     /* biome-ignore lint/a11y/noStaticElementInteractions: tap em qualquer área é o gesto P0 de play/pause */
     <div
       ref={stageRef}
-      className="fixed inset-0 cursor-default overflow-hidden bg-ls-black"
-      onClick={togglePlay}
+      className="fixed inset-0 cursor-default touch-none overflow-hidden bg-ls-black"
+      onClick={handleStageClick}
       onPointerMove={showControls}
     >
       {/* Barra de progresso: hairline no topo */}
@@ -272,12 +378,20 @@ function Prompter({ script }: { script: Script }) {
         />
       </div>
 
-      <div ref={contentRef} className="will-change-transform">
-        <div
-          className="mx-auto max-w-[900px] whitespace-pre-wrap px-[7vw] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white md:px-12"
-          style={{ fontSize: `${fontSize}px` }}
-        >
-          {script.content}
+      {/* Espelhamento para teleprompter físico: aplica no palco inteiro */}
+      <div
+        className="h-full w-full"
+        style={{
+          transform: `scale(${mirrorX ? -1 : 1}, ${mirrorY ? -1 : 1})`,
+        }}
+      >
+        <div ref={contentRef} className="will-change-transform">
+          <div
+            className="mx-auto max-w-[900px] whitespace-pre-wrap px-[7vw] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white md:px-12"
+            style={{ fontSize: `${fontSize}px` }}
+          >
+            {script.content}
+          </div>
         </div>
       </div>
 
@@ -381,6 +495,40 @@ function Prompter({ script }: { script: Script }) {
               {fontSize}
             </span>
           </div>
+
+          <div className="mx-2 h-6 w-px bg-ls-white/10" aria-hidden />
+
+          <button
+            type="button"
+            onClick={() => {
+              setMirrorX((prev) => !prev)
+              showControls()
+            }}
+            aria-label="Espelhar horizontal"
+            aria-pressed={mirrorX}
+            title="Espelhar horizontal (M)"
+            className={`rounded-btn p-2.5 transition-colors duration-[140ms] hover:text-ls-white ${
+              mirrorX ? 'text-ls-blue' : 'text-ls-gray-500'
+            }`}
+          >
+            <FlipHorizontal2 size={20} strokeWidth={1.5} aria-hidden />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMirrorY((prev) => !prev)
+              showControls()
+            }}
+            aria-label="Espelhar vertical"
+            aria-pressed={mirrorY}
+            title="Espelhar vertical"
+            className={`rounded-btn p-2.5 transition-colors duration-[140ms] hover:text-ls-white ${
+              mirrorY ? 'text-ls-blue' : 'text-ls-gray-500'
+            }`}
+          >
+            <FlipVertical2 size={20} strokeWidth={1.5} aria-hidden />
+          </button>
 
           <div className="mx-2 h-6 w-px bg-ls-white/10" aria-hidden />
 

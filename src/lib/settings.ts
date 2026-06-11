@@ -3,6 +3,10 @@ export interface PrompterSettings {
   speed: number
   /** Tamanho da fonte do prompter em px */
   fontSize: number
+  /** Espelhamento horizontal (teleprompter físico com espelho) */
+  mirrorX: boolean
+  /** Espelhamento vertical */
+  mirrorY: boolean
 }
 
 export const SPEED_MIN = 10
@@ -15,6 +19,8 @@ export const FONT_STEP = 4
 export const DEFAULT_SETTINGS: PrompterSettings = {
   speed: 60,
   fontSize: 48,
+  mirrorX: false,
+  mirrorY: false,
 }
 
 const SETTINGS_KEY = 'kotodama:settings'
@@ -39,6 +45,8 @@ export function loadSettings(): PrompterSettings {
       fontSize: clampFontSize(
         Number(parsed.fontSize) || DEFAULT_SETTINGS.fontSize,
       ),
+      mirrorX: parsed.mirrorX === true,
+      mirrorY: parsed.mirrorY === true,
     }
   } catch {
     return DEFAULT_SETTINGS
