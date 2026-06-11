@@ -15,3 +15,7 @@ todos.json
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# Artefatos de teste manual
+.playwright-mcp
+prompter.png
