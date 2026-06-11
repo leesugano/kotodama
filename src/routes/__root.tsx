@@ -33,7 +33,18 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
+const CANONICAL_HOST = 'kotodama.leesugano.com'
+
 function RootDocument({ children }: { children: React.ReactNode }) {
+  /* Domínio canônico: o workers.dev segue no ar, mas manda para cá */
+  useEffect(() => {
+    if (window.location.hostname === 'kotodama.leesugano.workers.dev') {
+      window.location.replace(
+        `https://${CANONICAL_HOST}${window.location.pathname}${window.location.search}`,
+      )
+    }
+  }, [])
+
   /* PWA: registra o service worker só em produção, sem bloquear o load */
   useEffect(() => {
     if (!import.meta.env.PROD) return

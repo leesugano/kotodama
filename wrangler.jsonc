@@ -12,8 +12,19 @@
     "enabled": true
   },
   "upload_source_maps": true,
+  /**
+   * Domínio canônico. O workers.dev continua ativo para links e PWAs
+   * antigos, mas o app redireciona para cá no client (__root.tsx).
+   */
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "kotodama.leesugano.com",
+      "custom_domain": true
+    }
+  ],
   "vars": {
-    "BETTER_AUTH_URL": "https://kotodama.leesugano.workers.dev"
+    "BETTER_AUTH_URL": "https://kotodama.leesugano.com"
   },
   /**
    * D1: usuários e sessões do Better Auth.

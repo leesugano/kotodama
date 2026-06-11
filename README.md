@@ -4,7 +4,7 @@
 
 Kotodama é um teleprompter open source que roda inteiro no navegador. Sem instalar app, sem conta obrigatória, sem anúncio cobrindo o texto. Funciona no celular e no desktop.
 
-**Produção:** https://kotodama.leesugano.workers.dev
+**Produção:** https://kotodama.leesugano.com
 
 ## Por que existe
 
@@ -169,7 +169,7 @@ migrations/            # migrações SQL do D1
 - [x] Fase 2: espelhamento, gestos mobile, wake lock, roteiros salvos, landing, autenticação
 - [x] Fase 3: PWA completo (offline), countdown 3-2-1, eye-line, presets, margens, seções, i18n
 - [x] Fase 4: QA do design system, Lighthouse 90+ (Performance 100 / A11y 95)
-- [ ] Domínio próprio
+- [x] Domínio próprio: kotodama.leesugano.com
 - [ ] v2: sync de roteiros via D1, controle remoto (celular controla o desktop), compartilhar por link
 
 ## Contribuindo
