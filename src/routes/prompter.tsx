@@ -1,0 +1,414 @@
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+  Maximize,
+  Minimize,
+  Minus,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  X,
+} from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { getScriptRepository } from '../lib/scripts/repository'
+import type { Script } from '../lib/scripts/types'
+import {
+  clampFontSize,
+  clampSpeed,
+  FONT_STEP,
+  loadSettings,
+  SPEED_MAX,
+  SPEED_MIN,
+  SPEED_STEP,
+  saveSettings,
+} from '../lib/settings'
+
+export const Route = createFileRoute('/prompter')({
+  ssr: false,
+  validateSearch: (search: Record<string, unknown>) => ({
+    id: typeof search.id === 'string' ? search.id : '',
+  }),
+  component: PrompterPage,
+})
+
+const CONTROLS_HIDE_DELAY = 3000
+/* Delta máximo por frame: evita salto ao voltar de aba em segundo plano */
+const MAX_FRAME_DELTA = 0.1
+
+function PrompterPage() {
+  const { id } = Route.useSearch()
+  const [script, setScript] = useState<Script | null | undefined>(undefined)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!id) {
+      setScript(null)
+      return
+    }
+    getScriptRepository()
+      .get(id)
+      .then((result) => {
+        if (!cancelled) setScript(result)
+      })
+      .catch(() => {
+        if (!cancelled) setScript(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  if (script === undefined) {
+    return <div className="fixed inset-0 bg-ls-black" />
+  }
+
+  if (script === null) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-ls-black px-6">
+        <p className="text-ls-white">Roteiro não encontrado</p>
+        <Link to="/" className="text-sm text-ls-blue">
+          Voltar ao editor →
+        </Link>
+      </div>
+    )
+  }
+
+  return <Prompter script={script} />
+}
+
+function Prompter({ script }: { script: Script }) {
+  const navigate = useNavigate()
+  const initialSettings = useRef(loadSettings()).current
+
+  const stageRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const progressRef = useRef<HTMLDivElement>(null)
+  const posRef = useRef(0)
+  const playingRef = useRef(false)
+  const speedRef = useRef(initialSettings.speed)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [playing, setPlaying] = useState(false)
+  const [speed, setSpeed] = useState(initialSettings.speed)
+  const [fontSize, setFontSize] = useState(initialSettings.fontSize)
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+
+  playingRef.current = playing
+  speedRef.current = speed
+
+  useEffect(() => {
+    saveSettings({ speed, fontSize })
+  }, [speed, fontSize])
+
+  /* Loop de scroll: requestAnimationFrame com delta time, velocidade em px/s
+     independente do framerate (60Hz e 120Hz rolam na mesma velocidade real) */
+  useEffect(() => {
+    let raf = 0
+    let lastTs: number | null = null
+    const tick = (ts: number) => {
+      const dt =
+        lastTs === null ? 0 : Math.min((ts - lastTs) / 1000, MAX_FRAME_DELTA)
+      lastTs = ts
+      const stage = stageRef.current
+      const content = contentRef.current
+      if (stage && content) {
+        const max = Math.max(0, content.scrollHeight - stage.clientHeight)
+        if (playingRef.current) {
+          posRef.current += speedRef.current * dt
+        }
+        posRef.current = Math.min(max, Math.max(0, posRef.current))
+        content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+        if (progressRef.current) {
+          const progress = max > 0 ? posRef.current / max : 0
+          progressRef.current.style.transform = `scaleX(${progress})`
+        }
+        if (playingRef.current && max > 0 && posRef.current >= max) {
+          setPlaying(false)
+          setControlsVisible(true)
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  const scheduleHide = useCallback(() => {
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = setTimeout(() => {
+      if (playingRef.current) setControlsVisible(false)
+    }, CONTROLS_HIDE_DELAY)
+  }, [])
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true)
+    scheduleHide()
+  }, [scheduleHide])
+
+  useEffect(() => {
+    return () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
+  }, [])
+
+  const togglePlay = useCallback(() => {
+    setPlaying((prev) => {
+      const next = !prev
+      if (next) {
+        scheduleHide()
+      } else {
+        setControlsVisible(true)
+      }
+      return next
+    })
+  }, [scheduleHide])
+
+  const restart = useCallback(() => {
+    posRef.current = 0
+    showControls()
+  }, [showControls])
+
+  const changeSpeed = useCallback(
+    (delta: number) => {
+      setSpeed((prev) => clampSpeed(prev + delta))
+      showControls()
+    },
+    [showControls],
+  )
+
+  const changeFontSize = useCallback(
+    (delta: number) => {
+      setFontSize((prev) => clampFontSize(prev + delta))
+      showControls()
+    },
+    [showControls],
+  )
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      document.documentElement.requestFullscreen().catch(() => {})
+    }
+  }, [])
+
+  const exit = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    }
+    navigate({ to: '/' })
+  }, [navigate])
+
+  /* Tenta fullscreen ao entrar; falha silenciosa se o browser exigir gesto */
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.().catch(() => {})
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {})
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case ' ':
+          e.preventDefault()
+          togglePlay()
+          break
+        case 'ArrowUp':
+          e.preventDefault()
+          changeSpeed(SPEED_STEP)
+          break
+        case 'ArrowDown':
+          e.preventDefault()
+          changeSpeed(-SPEED_STEP)
+          break
+        case '+':
+        case '=':
+          changeFontSize(FONT_STEP)
+          break
+        case '-':
+        case '_':
+          changeFontSize(-FONT_STEP)
+          break
+        case 'r':
+        case 'R':
+          restart()
+          break
+        case 'f':
+        case 'F':
+          toggleFullscreen()
+          break
+        case 'Escape':
+          /* Com fullscreen ativo o Esc sai do fullscreen; sem ele, sai do prompter */
+          if (!document.fullscreenElement) exit()
+          break
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [togglePlay, changeSpeed, changeFontSize, restart, toggleFullscreen, exit])
+
+  return (
+    /* biome-ignore lint/a11y/useKeyWithClickEvents: o teclado controla via atalhos globais */
+    /* biome-ignore lint/a11y/noStaticElementInteractions: tap em qualquer área é o gesto P0 de play/pause */
+    <div
+      ref={stageRef}
+      className="fixed inset-0 cursor-default overflow-hidden bg-ls-black"
+      onClick={togglePlay}
+      onPointerMove={showControls}
+    >
+      {/* Barra de progresso: hairline no topo */}
+      <div className="absolute inset-x-0 top-0 z-20 h-0.5 bg-ls-white/10">
+        <div
+          ref={progressRef}
+          className="h-full w-full origin-left bg-ls-blue"
+          style={{ transform: 'scaleX(0)' }}
+        />
+      </div>
+
+      <div ref={contentRef} className="will-change-transform">
+        <div
+          className="mx-auto max-w-[900px] whitespace-pre-wrap px-[7vw] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white md:px-12"
+          style={{ fontSize: `${fontSize}px` }}
+        >
+          {script.content}
+        </div>
+      </div>
+
+      {/* Overlay de controles: aparece com toque ou mouse, some após 3s rolando */}
+      <div
+        className={`fade-overlay absolute inset-x-0 bottom-0 z-30 ${
+          controlsVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+        role="toolbar"
+        aria-label="Controles do prompter"
+        tabIndex={-1}
+      >
+        <div className="mx-auto mb-6 flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-card bg-ls-gray-900/95 px-3 py-2">
+          <button
+            type="button"
+            onClick={restart}
+            aria-label="Voltar ao início"
+            title="Voltar ao início (R)"
+            className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+          >
+            <RotateCcw size={20} strokeWidth={1.5} aria-hidden />
+          </button>
+
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={playing ? 'Pausar' : 'Reproduzir'}
+            title={playing ? 'Pausar (espaço)' : 'Reproduzir (espaço)'}
+            className="rounded-btn p-2.5 text-ls-white transition-colors duration-[140ms] hover:text-ls-blue"
+          >
+            {playing ? (
+              <Pause size={24} strokeWidth={1.5} aria-hidden />
+            ) : (
+              <Play size={24} strokeWidth={1.5} aria-hidden />
+            )}
+          </button>
+
+          <div className="mx-2 h-6 w-px bg-ls-white/10" aria-hidden />
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => changeSpeed(-SPEED_STEP)}
+              aria-label="Diminuir velocidade"
+              title="Diminuir velocidade (seta para baixo)"
+              className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+            >
+              <Minus size={18} strokeWidth={1.5} aria-hidden />
+            </button>
+            <input
+              type="range"
+              min={SPEED_MIN}
+              max={SPEED_MAX}
+              step={SPEED_STEP}
+              value={speed}
+              onChange={(e) => {
+                setSpeed(clampSpeed(Number(e.target.value)))
+                showControls()
+              }}
+              aria-label="Velocidade do scroll"
+              className="h-1 w-24 cursor-pointer accent-[var(--ls-blue)]"
+            />
+            <button
+              type="button"
+              onClick={() => changeSpeed(SPEED_STEP)}
+              aria-label="Aumentar velocidade"
+              title="Aumentar velocidade (seta para cima)"
+              className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+            >
+              <Plus size={18} strokeWidth={1.5} aria-hidden />
+            </button>
+            <span className="w-16 text-center text-xs tabular-nums text-ls-gray-500">
+              {speed} px/s
+            </span>
+          </div>
+
+          <div className="mx-2 h-6 w-px bg-ls-white/10" aria-hidden />
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => changeFontSize(-FONT_STEP)}
+              aria-label="Diminuir fonte"
+              title="Diminuir fonte (-)"
+              className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+            >
+              <span className="text-sm leading-none">A</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => changeFontSize(FONT_STEP)}
+              aria-label="Aumentar fonte"
+              title="Aumentar fonte (+)"
+              className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+            >
+              <span className="text-lg leading-none">A</span>
+            </button>
+            <span className="w-10 text-center text-xs tabular-nums text-ls-gray-500">
+              {fontSize}
+            </span>
+          </div>
+
+          <div className="mx-2 h-6 w-px bg-ls-white/10" aria-hidden />
+
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? 'Sair de tela cheia' : 'Tela cheia'}
+            title={isFullscreen ? 'Sair de tela cheia (F)' : 'Tela cheia (F)'}
+            className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+          >
+            {isFullscreen ? (
+              <Minimize size={20} strokeWidth={1.5} aria-hidden />
+            ) : (
+              <Maximize size={20} strokeWidth={1.5} aria-hidden />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={exit}
+            aria-label="Sair do prompter"
+            title="Sair do prompter (Esc)"
+            className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+          >
+            <X size={20} strokeWidth={1.5} aria-hidden />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
