@@ -16,10 +16,11 @@ todos.json
 !.dev.vars.example
 !.env.example
 
-# Artefatos de teste manual
+# Manual test artifacts
 .playwright-mcp
 prompter.png
 landing.png
+*.jpeg
 
-# Claude Code — memória de projeto pessoal (gerida pela skill save-memory)
+# Claude Code — personal project memory (managed by the save-memory skill)
 .claude/project-memory.md
