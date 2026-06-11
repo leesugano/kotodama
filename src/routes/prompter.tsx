@@ -9,19 +9,31 @@ import {
   Play,
   Plus,
   RotateCcw,
+  SlidersHorizontal,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useWakeLock } from '../hooks/useWakeLock'
+import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
 import {
+  COUNTDOWN_MAX,
+  COUNTDOWN_MIN,
+  clampCountdown,
+  clampEyeLinePosition,
   clampFontSize,
+  clampMargin,
   clampSpeed,
+  EYELINE_MAX,
+  EYELINE_MIN,
   FONT_STEP,
   loadSettings,
+  MARGIN_MAX,
+  MARGIN_MIN,
   SPEED_MAX,
   SPEED_MIN,
+  SPEED_PRESETS,
   SPEED_STEP,
   saveSettings,
 } from '../lib/settings'
@@ -37,6 +49,14 @@ export const Route = createFileRoute('/prompter')({
 const CONTROLS_HIDE_DELAY = 3000
 /* Delta máximo por frame: evita salto ao voltar de aba em segundo plano */
 const MAX_FRAME_DELTA = 0.1
+/* Linha sozinha com 3+ hífens quebra o roteiro em seções */
+const SECTION_BREAK = /^[\t ]*-{3,}[\t ]*$/m
+
+const PRESET_LABELS = {
+  calm: 'preset.calm',
+  natural: 'preset.natural',
+  fast: 'preset.fast',
+} as const
 
 function PrompterPage() {
   const { id } = Route.useSearch()
@@ -68,9 +88,9 @@ function PrompterPage() {
   if (script === null) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-ls-black px-6">
-        <p className="text-ls-white">Roteiro não encontrado</p>
+        <p className="text-ls-white">{t('prompter.notFound')}</p>
         <Link to="/editor" className="text-sm text-ls-blue">
-          Voltar ao editor →
+          {t('prompter.backToEditor')}
         </Link>
       </div>
     )
@@ -89,24 +109,63 @@ function Prompter({ script }: { script: Script }) {
   const posRef = useRef(0)
   const playingRef = useRef(false)
   const speedRef = useRef(initialSettings.speed)
+  const countdownRef = useRef(initialSettings.countdown)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(initialSettings.speed)
   const [fontSize, setFontSize] = useState(initialSettings.fontSize)
   const [mirrorX, setMirrorX] = useState(initialSettings.mirrorX)
   const [mirrorY, setMirrorY] = useState(initialSettings.mirrorY)
+  const [countdown, setCountdown] = useState(initialSettings.countdown)
+  const [eyeLine, setEyeLine] = useState(initialSettings.eyeLine)
+  const [eyeLinePosition, setEyeLinePosition] = useState(
+    initialSettings.eyeLinePosition,
+  )
+  const [margin, setMargin] = useState(initialSettings.margin)
+  const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
   const [controlsVisible, setControlsVisible] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   playingRef.current = playing
   speedRef.current = speed
+  countdownRef.current = countdown
 
   useWakeLock()
 
   useEffect(() => {
-    saveSettings({ speed, fontSize, mirrorX, mirrorY })
-  }, [speed, fontSize, mirrorX, mirrorY])
+    saveSettings({
+      speed,
+      fontSize,
+      mirrorX,
+      mirrorY,
+      countdown,
+      eyeLine,
+      eyeLinePosition,
+      margin,
+    })
+  }, [
+    speed,
+    fontSize,
+    mirrorX,
+    mirrorY,
+    countdown,
+    eyeLine,
+    eyeLinePosition,
+    margin,
+  ])
+
+  /* Seções: linhas `---` viram separadores visuais em vez de texto */
+  const sections = useMemo(
+    () =>
+      script.content
+        .split(SECTION_BREAK)
+        .map((part) => part.replace(/^\n+|\n+$/g, ''))
+        .filter((part) => part.length > 0),
+    [script.content],
+  )
 
   /* Loop de scroll: requestAnimationFrame com delta time, velocidade em px/s
      independente do framerate (60Hz e 120Hz rolam na mesma velocidade real) */
@@ -144,7 +203,10 @@ function Prompter({ script }: { script: Script }) {
   const scheduleHide = useCallback(() => {
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
     hideTimerRef.current = setTimeout(() => {
-      if (playingRef.current) setControlsVisible(false)
+      if (playingRef.current) {
+        setControlsVisible(false)
+        setSettingsOpen(false)
+      }
     }, CONTROLS_HIDE_DELAY)
   }, [])
 
@@ -156,20 +218,58 @@ function Prompter({ script }: { script: Script }) {
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
     }
   }, [])
 
-  const togglePlay = useCallback(() => {
-    setPlaying((prev) => {
-      const next = !prev
-      if (next) {
-        scheduleHide()
-      } else {
-        setControlsVisible(true)
-      }
-      return next
-    })
+  const cancelCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+    }
+    setCountdownLeft(null)
+  }, [])
+
+  /* Play passa pela contagem regressiva quando configurada; tap durante a
+     contagem cancela e volta ao estado pausado */
+  const startPlayback = useCallback(() => {
+    setSettingsOpen(false)
+    if (countdownRef.current > 0) {
+      setCountdownLeft(countdownRef.current)
+      setControlsVisible(false)
+      countdownTimerRef.current = setInterval(() => {
+        setCountdownLeft((prev) => {
+          if (prev === null || prev <= 1) {
+            if (countdownTimerRef.current) {
+              clearInterval(countdownTimerRef.current)
+              countdownTimerRef.current = null
+            }
+            setPlaying(true)
+            scheduleHide()
+            return null
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      setPlaying(true)
+      scheduleHide()
+    }
   }, [scheduleHide])
+
+  const togglePlay = useCallback(() => {
+    if (countdownTimerRef.current) {
+      cancelCountdown()
+      setControlsVisible(true)
+      return
+    }
+    if (playingRef.current) {
+      setPlaying(false)
+      setControlsVisible(true)
+    } else {
+      startPlayback()
+    }
+  }, [cancelCountdown, startPlayback])
 
   const restart = useCallback(() => {
     posRef.current = 0
@@ -387,12 +487,50 @@ function Prompter({ script }: { script: Script }) {
       >
         <div ref={contentRef} className="will-change-transform">
           <div
-            className="mx-auto max-w-[900px] whitespace-pre-wrap px-[7vw] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white md:px-12"
-            style={{ fontSize: `${fontSize}px` }}
+            className="mx-auto max-w-[900px] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white"
+            style={{
+              fontSize: `${fontSize}px`,
+              paddingLeft: `${margin}vw`,
+              paddingRight: `${margin}vw`,
+            }}
           >
-            {script.content}
+            {sections.map((section, index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: seções derivam do texto e só mudam juntas
+              <div key={index}>
+                {index > 0 && (
+                  <div
+                    aria-hidden
+                    className="mx-auto my-[1.6em] h-px w-[36%] bg-ls-white/20"
+                  />
+                )}
+                <p className="whitespace-pre-wrap">{section}</p>
+              </div>
+            ))}
           </div>
         </div>
+
+        {/* Linha-guia: mantém o olhar fixo perto da câmera */}
+        {eyeLine && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 z-10"
+            style={{ top: `${eyeLinePosition}%` }}
+          >
+            <div className="h-0.5 w-full bg-ls-blue opacity-30" />
+          </div>
+        )}
+
+        {/* Contagem regressiva antes do scroll iniciar */}
+        {countdownLeft !== null && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-ls-black/70">
+            <span
+              key={countdownLeft}
+              className="display countdown-pop text-[22vmin] tabular-nums text-ls-white"
+            >
+              {countdownLeft}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Overlay de controles: aparece com toque ou mouse, some após 3s rolando */}
@@ -403,15 +541,154 @@ function Prompter({ script }: { script: Script }) {
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
         role="toolbar"
-        aria-label="Controles do prompter"
+        aria-label={t('prompter.controls')}
         tabIndex={-1}
       >
+        {/* Painel de ajustes: presets, contagem, linha-guia e margens */}
+        {settingsOpen && (
+          <div className="mx-auto mb-2 w-fit max-w-[calc(100vw-2rem)] rounded-card bg-ls-gray-900/95 px-5 py-4">
+            <div className="flex w-64 flex-col gap-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-ls-gray-500">
+                  {t('settings.presets')}
+                </span>
+                <div className="flex gap-1">
+                  {SPEED_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => {
+                        setSpeed(preset.speed)
+                        showControls()
+                      }}
+                      aria-pressed={speed === preset.speed}
+                      className={`rounded-btn px-2.5 py-1 text-xs transition-colors duration-[140ms] ${
+                        speed === preset.speed
+                          ? 'bg-ls-blue text-ls-white'
+                          : 'text-ls-gray-500 hover:text-ls-white'
+                      }`}
+                    >
+                      {t(PRESET_LABELS[preset.id])}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="countdown-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.countdown')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="countdown-range"
+                    type="range"
+                    min={COUNTDOWN_MIN}
+                    max={COUNTDOWN_MAX}
+                    step={1}
+                    value={countdown}
+                    onChange={(e) =>
+                      setCountdown(clampCountdown(Number(e.target.value)))
+                    }
+                    className="h-1 w-20 cursor-pointer accent-[var(--ls-blue)]"
+                  />
+                  <span className="w-14 text-right text-xs tabular-nums text-ls-gray-500">
+                    {countdown === 0
+                      ? t('settings.countdownOff')
+                      : `${countdown}s`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-ls-gray-500">
+                  {t('settings.eyeLine')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={eyeLine}
+                  aria-label={t('settings.eyeLine')}
+                  onClick={() => setEyeLine((prev) => !prev)}
+                  className={`relative h-5 w-9 rounded-full transition-colors duration-[140ms] ${
+                    eyeLine ? 'bg-ls-blue' : 'bg-ls-gray-500/40'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-ls-white transition-transform duration-[140ms] ${
+                      eyeLine ? 'translate-x-4' : ''
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {eyeLine && (
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="eyeline-range"
+                    className="text-xs text-ls-gray-500"
+                  >
+                    {t('settings.eyeLinePosition')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="eyeline-range"
+                      type="range"
+                      min={EYELINE_MIN}
+                      max={EYELINE_MAX}
+                      step={1}
+                      value={eyeLinePosition}
+                      onChange={(e) =>
+                        setEyeLinePosition(
+                          clampEyeLinePosition(Number(e.target.value)),
+                        )
+                      }
+                      className="h-1 w-20 cursor-pointer accent-[var(--ls-blue)]"
+                    />
+                    <span className="w-14 text-right text-xs tabular-nums text-ls-gray-500">
+                      {eyeLinePosition}%
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="margin-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.margin')}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="margin-range"
+                    type="range"
+                    min={MARGIN_MIN}
+                    max={MARGIN_MAX}
+                    step={1}
+                    value={margin}
+                    onChange={(e) =>
+                      setMargin(clampMargin(Number(e.target.value)))
+                    }
+                    className="h-1 w-20 cursor-pointer accent-[var(--ls-blue)]"
+                  />
+                  <span className="w-14 text-right text-xs tabular-nums text-ls-gray-500">
+                    {margin}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mx-auto mb-6 flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-card bg-ls-gray-900/95 px-3 py-2">
           <button
             type="button"
             onClick={restart}
-            aria-label="Voltar ao início"
-            title="Voltar ao início (R)"
+            aria-label={t('prompter.restart')}
+            title={`${t('prompter.restart')} (R)`}
             className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
           >
             <RotateCcw size={20} strokeWidth={1.5} aria-hidden />
@@ -420,8 +697,8 @@ function Prompter({ script }: { script: Script }) {
           <button
             type="button"
             onClick={togglePlay}
-            aria-label={playing ? 'Pausar' : 'Reproduzir'}
-            title={playing ? 'Pausar (espaço)' : 'Reproduzir (espaço)'}
+            aria-label={playing ? t('prompter.pause') : t('prompter.play')}
+            title={`${playing ? t('prompter.pause') : t('prompter.play')} (${t('prompter.space')})`}
             className="rounded-btn p-2.5 text-ls-white transition-colors duration-[140ms] hover:text-ls-blue"
           >
             {playing ? (
@@ -437,8 +714,8 @@ function Prompter({ script }: { script: Script }) {
             <button
               type="button"
               onClick={() => changeSpeed(-SPEED_STEP)}
-              aria-label="Diminuir velocidade"
-              title="Diminuir velocidade (seta para baixo)"
+              aria-label={t('prompter.speedDown')}
+              title={`${t('prompter.speedDown')} (${t('prompter.speedDownHint')})`}
               className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
             >
               <Minus size={18} strokeWidth={1.5} aria-hidden />
@@ -453,14 +730,14 @@ function Prompter({ script }: { script: Script }) {
                 setSpeed(clampSpeed(Number(e.target.value)))
                 showControls()
               }}
-              aria-label="Velocidade do scroll"
+              aria-label={t('prompter.speedLabel')}
               className="h-1 w-24 cursor-pointer accent-[var(--ls-blue)]"
             />
             <button
               type="button"
               onClick={() => changeSpeed(SPEED_STEP)}
-              aria-label="Aumentar velocidade"
-              title="Aumentar velocidade (seta para cima)"
+              aria-label={t('prompter.speedUp')}
+              title={`${t('prompter.speedUp')} (${t('prompter.speedUpHint')})`}
               className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
             >
               <Plus size={18} strokeWidth={1.5} aria-hidden />
@@ -476,8 +753,8 @@ function Prompter({ script }: { script: Script }) {
             <button
               type="button"
               onClick={() => changeFontSize(-FONT_STEP)}
-              aria-label="Diminuir fonte"
-              title="Diminuir fonte (-)"
+              aria-label={t('prompter.fontDown')}
+              title={`${t('prompter.fontDown')} (-)`}
               className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
             >
               <span className="text-sm leading-none">A</span>
@@ -485,8 +762,8 @@ function Prompter({ script }: { script: Script }) {
             <button
               type="button"
               onClick={() => changeFontSize(FONT_STEP)}
-              aria-label="Aumentar fonte"
-              title="Aumentar fonte (+)"
+              aria-label={t('prompter.fontUp')}
+              title={`${t('prompter.fontUp')} (+)`}
               className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
             >
               <span className="text-lg leading-none">A</span>
@@ -504,9 +781,9 @@ function Prompter({ script }: { script: Script }) {
               setMirrorX((prev) => !prev)
               showControls()
             }}
-            aria-label="Espelhar horizontal"
+            aria-label={t('prompter.mirrorH')}
             aria-pressed={mirrorX}
-            title="Espelhar horizontal (M)"
+            title={`${t('prompter.mirrorH')} (M)`}
             className={`rounded-btn p-2.5 transition-colors duration-[140ms] hover:text-ls-white ${
               mirrorX ? 'text-ls-blue' : 'text-ls-gray-500'
             }`}
@@ -520,9 +797,9 @@ function Prompter({ script }: { script: Script }) {
               setMirrorY((prev) => !prev)
               showControls()
             }}
-            aria-label="Espelhar vertical"
+            aria-label={t('prompter.mirrorV')}
             aria-pressed={mirrorY}
-            title="Espelhar vertical"
+            title={t('prompter.mirrorV')}
             className={`rounded-btn p-2.5 transition-colors duration-[140ms] hover:text-ls-white ${
               mirrorY ? 'text-ls-blue' : 'text-ls-gray-500'
             }`}
@@ -534,9 +811,26 @@ function Prompter({ script }: { script: Script }) {
 
           <button
             type="button"
+            onClick={() => setSettingsOpen((prev) => !prev)}
+            aria-label={t('prompter.settings')}
+            aria-expanded={settingsOpen}
+            title={t('prompter.settings')}
+            className={`rounded-btn p-2.5 transition-colors duration-[140ms] hover:text-ls-white ${
+              settingsOpen ? 'text-ls-blue' : 'text-ls-gray-500'
+            }`}
+          >
+            <SlidersHorizontal size={20} strokeWidth={1.5} aria-hidden />
+          </button>
+
+          <button
+            type="button"
             onClick={toggleFullscreen}
-            aria-label={isFullscreen ? 'Sair de tela cheia' : 'Tela cheia'}
-            title={isFullscreen ? 'Sair de tela cheia (F)' : 'Tela cheia (F)'}
+            aria-label={
+              isFullscreen
+                ? t('prompter.exitFullscreen')
+                : t('prompter.fullscreen')
+            }
+            title={`${isFullscreen ? t('prompter.exitFullscreen') : t('prompter.fullscreen')} (F)`}
             className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
           >
             {isFullscreen ? (
@@ -549,8 +843,8 @@ function Prompter({ script }: { script: Script }) {
           <button
             type="button"
             onClick={exit}
-            aria-label="Sair do prompter"
-            title="Sair do prompter (Esc)"
+            aria-label={t('prompter.exit')}
+            title={`${t('prompter.exit')} (Esc)`}
             className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
           >
             <X size={20} strokeWidth={1.5} aria-hidden />

@@ -10,7 +10,10 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { InstallPrompt } from '../components/InstallPrompt'
+import { Logo } from '../components/Logo'
 import { authClient } from '../lib/auth/client'
+import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
 import { loadCurrentScriptId, saveCurrentScriptId } from '../lib/settings'
@@ -252,12 +255,14 @@ function EditorPage() {
   const sidebar = (
     <>
       <div className="flex items-center justify-between border-b border-ls-line px-4 py-3">
-        <h2 className="text-sm font-medium text-ls-gray-900">Roteiros</h2>
+        <h2 className="text-sm font-medium text-ls-gray-900">
+          {t('editor.scripts')}
+        </h2>
         <button
           type="button"
           onClick={newScript}
-          aria-label="Novo roteiro"
-          title="Novo roteiro"
+          aria-label={t('editor.newScript')}
+          title={t('editor.newScript')}
           className="rounded-btn p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:bg-ls-gray-50 hover:text-ls-gray-900"
         >
           <Plus size={18} strokeWidth={1.5} aria-hidden />
@@ -266,8 +271,7 @@ function EditorPage() {
       <ul className="flex-1 overflow-y-auto py-2">
         {scripts.length === 0 && (
           <li className="px-4 py-6 text-sm text-ls-gray-500">
-            Nenhum roteiro ainda. Comece a escrever e o roteiro é salvo
-            automaticamente.
+            {t('editor.empty')}
           </li>
         )}
         {scripts.map((script) => {
@@ -283,7 +287,7 @@ function EditorPage() {
               {confirmDeleteId === script.id ? (
                 <div className="rounded-input px-3 py-3">
                   <p className="text-sm text-ls-gray-900">
-                    Excluir este roteiro?
+                    {t('editor.deleteConfirm')}
                   </p>
                   <div className="mt-2 flex gap-2">
                     <button
@@ -291,14 +295,14 @@ function EditorPage() {
                       onClick={() => deleteScript(script.id)}
                       className="rounded-btn bg-ls-gray-900 px-3 py-1.5 text-xs text-ls-white transition-colors duration-[140ms] hover:bg-ls-black"
                     >
-                      Excluir
+                      {t('editor.delete')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}
                       className="rounded-btn px-3 py-1.5 text-xs text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
                     >
-                      Cancelar
+                      {t('editor.cancel')}
                     </button>
                   </div>
                 </div>
@@ -313,13 +317,13 @@ function EditorPage() {
                     }}
                     // biome-ignore lint/a11y/noAutofocus: o campo acabou de ser aberto pela ação de renomear
                     autoFocus
-                    aria-label="Novo título do roteiro"
+                    aria-label={t('editor.newTitle')}
                     className="w-full rounded-input border border-ls-line px-2 py-1.5 text-sm text-ls-gray-900 outline-none focus:border-ls-blue"
                   />
                   <button
                     type="button"
                     onClick={() => commitRename(script)}
-                    aria-label="Confirmar título"
+                    aria-label={t('editor.confirmTitle')}
                     className="rounded-btn p-1.5 text-ls-blue"
                   >
                     <Check size={16} strokeWidth={1.5} aria-hidden />
@@ -350,8 +354,8 @@ function EditorPage() {
                     <button
                       type="button"
                       onClick={() => startRename(script)}
-                      aria-label={`Renomear ${script.title}`}
-                      title="Renomear"
+                      aria-label={`${t('editor.rename')}: ${script.title}`}
+                      title={t('editor.rename')}
                       className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
                     >
                       <Pencil size={14} strokeWidth={1.5} aria-hidden />
@@ -359,8 +363,8 @@ function EditorPage() {
                     <button
                       type="button"
                       onClick={() => duplicateScript(script)}
-                      aria-label={`Duplicar ${script.title}`}
-                      title="Duplicar"
+                      aria-label={`${t('editor.duplicate')}: ${script.title}`}
+                      title={t('editor.duplicate')}
                       className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
                     >
                       <Copy size={14} strokeWidth={1.5} aria-hidden />
@@ -368,8 +372,8 @@ function EditorPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(script.id)}
-                      aria-label={`Excluir ${script.title}`}
-                      title="Excluir"
+                      aria-label={`${t('editor.delete')}: ${script.title}`}
+                      title={t('editor.delete')}
                       className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
                     >
                       <Trash2 size={14} strokeWidth={1.5} aria-hidden />
@@ -394,7 +398,7 @@ function EditorPage() {
         <div className="fixed inset-0 z-40 md:hidden">
           <button
             type="button"
-            aria-label="Fechar lista de roteiros"
+            aria-label={t('editor.closeList')}
             onClick={() => setSidebarOpen(false)}
             className="absolute inset-0 bg-ls-black/20"
           />
@@ -403,7 +407,7 @@ function EditorPage() {
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
-                aria-label="Fechar"
+                aria-label={t('editor.close')}
                 className="rounded-btn p-2 text-ls-gray-500"
               >
                 <X size={18} strokeWidth={1.5} aria-hidden />
@@ -419,13 +423,18 @@ function EditorPage() {
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Abrir lista de roteiros"
+            aria-label={t('editor.openList')}
             className="rounded-btn p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 md:hidden"
           >
             <PanelLeft size={20} strokeWidth={1.5} aria-hidden />
           </button>
-          <Link to="/" className="display text-lg text-ls-black">
-            Kotodama
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-ls-black"
+            aria-label="Kotodama"
+          >
+            <Logo size={22} />
+            <span className="display text-lg">Kotodama</span>
           </Link>
           <div className="ml-auto flex items-center gap-3">
             {session?.user ? (
@@ -438,7 +447,7 @@ function EditorPage() {
                   onClick={() => authClient.signOut()}
                   className="rounded-btn px-3 py-1.5 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
                 >
-                  Sair
+                  {t('editor.signOut')}
                 </button>
               </>
             ) : (
@@ -446,7 +455,7 @@ function EditorPage() {
                 to="/entrar"
                 className="rounded-btn px-3 py-1.5 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
               >
-                Entrar
+                {t('editor.signIn')}
               </Link>
             )}
           </div>
@@ -457,8 +466,8 @@ function EditorPage() {
             ref={textareaRef}
             value={content}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder={loaded ? 'Cole ou digite seu roteiro' : ''}
-            aria-label="Roteiro"
+            placeholder={loaded ? t('editor.placeholder') : ''}
+            aria-label={t('editor.scriptLabel')}
             className="flex-1 resize-none border-0 bg-transparent py-6 text-lg leading-relaxed text-ls-gray-900 outline-none placeholder:text-ls-gray-500"
           />
         </main>
@@ -468,12 +477,12 @@ function EditorPage() {
             <p className="text-sm text-ls-gray-500">
               {hasText ? (
                 <>
-                  {words} {words === 1 ? 'palavra' : 'palavras'}
+                  {words} {words === 1 ? t('editor.word') : t('editor.words')}
                   <span className="px-2 text-ls-line">|</span>
-                  {duration} a 140 wpm
+                  {duration} {t('editor.wpmSuffix')}
                 </>
               ) : (
-                'Comece colando seu texto'
+                t('editor.startHint')
               )}
             </p>
             <button
@@ -482,12 +491,14 @@ function EditorPage() {
               disabled={!hasText}
               className="inline-flex items-center gap-2 rounded-btn bg-ls-blue px-5 py-2.5 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed active:bg-ls-blue-pressed disabled:cursor-default disabled:bg-ls-gray-50 disabled:text-ls-gray-500"
             >
-              Iniciar prompter
+              {t('editor.start')}
               <ArrowRight size={16} strokeWidth={1.5} aria-hidden />
             </button>
           </div>
         </footer>
       </div>
+
+      <InstallPrompt />
     </div>
   )
 }

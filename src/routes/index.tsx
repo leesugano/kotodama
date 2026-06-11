@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { useEffect } from 'react'
+import { Logo } from '../components/Logo'
 
 export const Route = createFileRoute('/')({ component: LandingPage })
 
@@ -96,8 +97,13 @@ function LandingPage() {
     <div className="bg-ls-white text-ls-gray-900">
       <header className="sticky top-0 z-40 border-b border-ls-line bg-ls-white/90 backdrop-blur">
         <nav className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
-          <Link to="/" className="display text-xl text-ls-black">
-            Kotodama
+          <Link
+            to="/"
+            className="flex items-center gap-2 text-ls-black"
+            aria-label="Kotodama"
+          >
+            <Logo size={24} />
+            <span className="display text-xl">Kotodama</span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <a

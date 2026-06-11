@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Info } from 'lucide-react'
 import { useState } from 'react'
+import { Logo } from '../components/Logo'
 import { authClient } from '../lib/auth/client'
 
 export const Route = createFileRoute('/entrar')({ component: SignInPage })
@@ -44,8 +45,13 @@ function SignInPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-ls-white">
       <header className="mx-auto w-full max-w-[1200px] px-6 py-4">
-        <Link to="/" className="display text-xl text-ls-black">
-          Kotodama
+        <Link
+          to="/"
+          className="flex w-fit items-center gap-2 text-ls-black"
+          aria-label="Kotodama"
+        >
+          <Logo size={24} />
+          <span className="display text-xl">Kotodama</span>
         </Link>
       </header>
 
