@@ -70,6 +70,10 @@ export function useVoiceTracking({
     if (!Recognition) return
 
     let stopped = false
+    /* Errors since the last result: stop restarting when the engine is
+       clearly broken (offline, no speech service) instead of looping */
+    let consecutiveErrors = 0
+    let restartTimer: ReturnType<typeof setTimeout> | null = null
     /* Tokens already emitted for the utterance currently being recognized */
     let utterance = { resultIndex: -1, emitted: 0 }
     const recognition = new Recognition()
@@ -84,6 +88,7 @@ export function useVoiceTracking({
       if (utterance.resultIndex !== lastIndex) {
         utterance = { resultIndex: lastIndex, emitted: 0 }
       }
+      consecutiveErrors = 0
       const tokens = tokenize(last[0].transcript)
       if (tokens.length > utterance.emitted) {
         onTokensRef.current(tokens.slice(utterance.emitted))
@@ -98,17 +103,24 @@ export function useVoiceTracking({
       ) {
         stopped = true
         onDeniedRef.current()
+        return
+      }
+      /* 'no-speech' is routine silence, anything else counts as a failure */
+      if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        consecutiveErrors += 1
       }
     }
 
     /* Engines stop after a silence; keep listening while active */
     recognition.onend = () => {
-      if (stopped) return
-      try {
-        recognition.start()
-      } catch {
-        // already started or shutting down: ignore
-      }
+      if (stopped || consecutiveErrors >= 3) return
+      restartTimer = setTimeout(() => {
+        try {
+          recognition.start()
+        } catch {
+          // already started or shutting down: ignore
+        }
+      }, 250)
     }
 
     try {
@@ -119,6 +131,7 @@ export function useVoiceTracking({
 
     return () => {
       stopped = true
+      if (restartTimer) clearTimeout(restartTimer)
       recognition.onresult = null
       recognition.onend = null
       recognition.onerror = null
