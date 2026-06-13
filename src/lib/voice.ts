@@ -7,9 +7,6 @@
  * misrecognized or skipped words without ever jumping far ahead.
  */
 
-/** How many script tokens ahead of the cursor a spoken token may match. */
-export const MATCH_LOOKAHEAD = 16
-
 const CJK_RE =
   /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/
 
@@ -99,30 +96,6 @@ export function tokensMatch(script: string, spoken: string): boolean {
   }
   if (min >= 5) return withinOneEdit(script, spoken)
   return false
-}
-
-/**
- * Advances the cursor through the script tokens given the spoken tokens.
- * Each spoken token may match anywhere inside the lookahead window; matches
- * move the cursor just past the matched token. Unmatched tokens are ignored.
- */
-export function advanceCursor(
-  scriptTokens: string[],
-  cursor: number,
-  spokenTokens: string[],
-  lookahead: number = MATCH_LOOKAHEAD,
-): number {
-  let position = cursor
-  for (const spoken of spokenTokens) {
-    const end = Math.min(position + lookahead, scriptTokens.length)
-    for (let i = position; i < end; i++) {
-      if (tokensMatch(scriptTokens[i], spoken)) {
-        position = i + 1
-        break
-      }
-    }
-  }
-  return position
 }
 
 /** Number of trailing spoken tokens used as the alignment anchor. */

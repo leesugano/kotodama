@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  advanceCursor,
   alignCursor,
   buildScriptIndex,
   matchSpeechLang,
@@ -83,42 +82,6 @@ describe('tokensMatch', () => {
   it('rejects different words', () => {
     expect(tokensMatch('cat', 'car')).toBe(false)
     expect(tokensMatch('banana', 'window')).toBe(false)
-  })
-})
-
-describe('advanceCursor', () => {
-  const script = tokenize('the quick brown fox jumps over the lazy dog')
-
-  it('advances through correctly recognized words', () => {
-    expect(advanceCursor(script, 0, ['the', 'quick', 'brown'])).toBe(3)
-  })
-
-  it('skips misrecognized words and recovers on the next match', () => {
-    expect(advanceCursor(script, 0, ['the', 'banana', 'brown'])).toBe(3)
-  })
-
-  it('re-matching a revised utterance from its baseline is stable', () => {
-    /* interim "the quick brow" then revised "the quick brown fox" */
-    const first = advanceCursor(script, 0, ['the', 'quick', 'brow'])
-    expect(first).toBe(3)
-    const revised = advanceCursor(script, 0, ['the', 'quick', 'brown', 'fox'])
-    expect(revised).toBe(4)
-  })
-
-  it('jumps ahead when the speaker skips words', () => {
-    expect(advanceCursor(script, 0, ['fox', 'jumps'])).toBe(5)
-  })
-
-  it('never advances past the lookahead window', () => {
-    expect(advanceCursor(script, 0, ['dog'], 4)).toBe(0)
-  })
-
-  it('ignores tokens that match nothing', () => {
-    expect(advanceCursor(script, 2, ['banana'])).toBe(2)
-  })
-
-  it('stops at the end of the script', () => {
-    expect(advanceCursor(script, 7, ['lazy', 'dog', 'extra'])).toBe(9)
   })
 })
 
