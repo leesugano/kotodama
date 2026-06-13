@@ -52,7 +52,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the anti-FOUC script below sets the `dark` class
+    // on <html> before hydration, so the client's class intentionally differs
+    // from the server HTML. React suppresses this one level deep.
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Anti-FOUC: set the theme class + status-bar color before first paint.
             Inlined and synchronous so it runs ahead of hydration. */}
