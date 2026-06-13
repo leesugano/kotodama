@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  advanceCursor,
+  alignCursor,
   buildScriptIndex,
   matchSpeechLang,
   resolveSpeechLang,
@@ -85,42 +85,6 @@ describe('tokensMatch', () => {
   })
 })
 
-describe('advanceCursor', () => {
-  const script = tokenize('the quick brown fox jumps over the lazy dog')
-
-  it('advances through correctly recognized words', () => {
-    expect(advanceCursor(script, 0, ['the', 'quick', 'brown'])).toBe(3)
-  })
-
-  it('skips misrecognized words and recovers on the next match', () => {
-    expect(advanceCursor(script, 0, ['the', 'banana', 'brown'])).toBe(3)
-  })
-
-  it('re-matching a revised utterance from its baseline is stable', () => {
-    /* interim "the quick brow" then revised "the quick brown fox" */
-    const first = advanceCursor(script, 0, ['the', 'quick', 'brow'])
-    expect(first).toBe(3)
-    const revised = advanceCursor(script, 0, ['the', 'quick', 'brown', 'fox'])
-    expect(revised).toBe(4)
-  })
-
-  it('jumps ahead when the speaker skips words', () => {
-    expect(advanceCursor(script, 0, ['fox', 'jumps'])).toBe(5)
-  })
-
-  it('never advances past the lookahead window', () => {
-    expect(advanceCursor(script, 0, ['dog'], 4)).toBe(0)
-  })
-
-  it('ignores tokens that match nothing', () => {
-    expect(advanceCursor(script, 2, ['banana'])).toBe(2)
-  })
-
-  it('stops at the end of the script', () => {
-    expect(advanceCursor(script, 7, ['lazy', 'dog', 'extra'])).toBe(9)
-  })
-})
-
 describe('SPEECH_LANGUAGES', () => {
   it('offers a broad set of unique BCP-47 tags', () => {
     expect(SPEECH_LANGUAGES.length).toBeGreaterThanOrEqual(50)
@@ -156,5 +120,72 @@ describe('resolveSpeechLang', () => {
 
   it('falls back to en-US outside the browser', () => {
     expect(resolveSpeechLang('')).toBe('en-US')
+  })
+})
+
+describe('alignCursor', () => {
+  const script = tokenize('the quick brown fox jumps over the lazy dog')
+  const long = tokenize(
+    'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango',
+  )
+
+  it('advances on a confident run of words', () => {
+    expect(alignCursor(script, 0, ['the', 'quick', 'brown'])).toBe(3)
+  })
+
+  it('advances on a two-word run within the near window', () => {
+    expect(alignCursor(script, 0, ['the', 'quick'])).toBe(2)
+  })
+
+  it('does not move on a lone common word that matches several places', () => {
+    // "the" appears at indices 0 and 6; one word is not a confident run
+    expect(alignCursor(script, 0, ['the'])).toBe(0)
+  })
+
+  it('never recedes below the committed cursor', () => {
+    // all three words are behind committed=5; cursor must not jump back
+    expect(alignCursor(script, 5, ['the', 'quick', 'brown'])).toBe(5)
+  })
+
+  it('ignores a lone word that matches behind/at the cursor', () => {
+    expect(alignCursor(script, 5, ['the'])).toBe(5)
+  })
+
+  it('recovers when one script word was misrecognized (one gap)', () => {
+    // "brown" skipped: the quick __ fox
+    expect(alignCursor(script, 0, ['the', 'quick', 'fox'])).toBe(4)
+  })
+
+  it('repositions on a long jump only with a 3-word run', () => {
+    // romeo/sierra/tango are at indices 17/18/19, far past the near window
+    expect(alignCursor(long, 0, ['romeo', 'sierra', 'tango'])).toBe(20)
+  })
+
+  it('does not take a long jump on only two matched words', () => {
+    expect(alignCursor(long, 0, ['sierra', 'tango'])).toBe(0)
+  })
+
+  it('aligns interim prefixes', () => {
+    expect(alignCursor(script, 0, ['the', 'quick', 'brow'])).toBe(3)
+  })
+
+  it('aligns CJK per-character tokens', () => {
+    const jp = tokenize('これは テスト です')
+    expect(alignCursor(jp, 0, tokenize('これは テスト'))).toBe(
+      tokenize('これは').length + tokenize('テスト').length,
+    )
+  })
+
+  it('leaves the cursor unchanged for empty speech', () => {
+    expect(alignCursor(script, 2, [])).toBe(2)
+  })
+
+  it('returns the committed position when already at the end of the script', () => {
+    expect(alignCursor(script, script.length, ['dog'])).toBe(script.length)
+  })
+
+  it('respects a smaller lookahead option', () => {
+    // "dog" is at index 8, outside a lookahead of 5 from committed=0
+    expect(alignCursor(script, 0, ['lazy', 'dog'], { lookahead: 5 })).toBe(0)
   })
 })

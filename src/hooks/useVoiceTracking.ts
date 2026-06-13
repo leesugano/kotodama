@@ -52,10 +52,10 @@ export interface UtteranceEvent {
 
 /**
  * Runs continuous speech recognition while `active`. Each event carries the
- * FULL token list of the current utterance, so the consumer can re-match it
- * from a stable baseline — interim transcripts get revised by the engine
- * ("brow" becomes "brown"), and incremental diffs would lose those fixes.
- * The engine restarts automatically after the silences that end it.
+ * FULL token list of the current utterance, so the consumer can re-align it
+ * freely — interim transcripts get revised by the engine ("brow" becomes
+ * "brown"), and incremental diffs would lose those fixes. The engine restarts
+ * automatically after the silences that end it.
  */
 export function useVoiceTracking({
   active,

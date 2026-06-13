@@ -7,9 +7,6 @@
  * misrecognized or skipped words without ever jumping far ahead.
  */
 
-/** How many script tokens ahead of the cursor a spoken token may match. */
-export const MATCH_LOOKAHEAD = 16
-
 const CJK_RE =
   /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/
 
@@ -101,28 +98,70 @@ export function tokensMatch(script: string, spoken: string): boolean {
   return false
 }
 
+/** Number of trailing spoken tokens used as the alignment anchor. */
+export const RECENT_TAIL = 8
+/** Distance (in tokens) at or below which a 2-word run is enough to advance. */
+export const NEAR = 16
+/** How far ahead of the cursor alignment will look for a confident match. */
+export const ALIGN_LOOKAHEAD = 60
+/** Matched-token runs required to accept a near advance vs. a far jump. */
+export const NEAR_MIN_RUN = 2
+/** Matched-token run required to accept an advance beyond the near window. */
+export const FAR_MIN_RUN = 3
+
 /**
- * Advances the cursor through the script tokens given the spoken tokens.
- * Each spoken token may match anywhere inside the lookahead window; matches
- * move the cursor just past the matched token. Unmatched tokens are ignored.
+ * Aligns the tail of recognized speech against the script ahead of the cursor.
+ *
+ * Speech engines rewrite interim transcripts constantly, so re-matching the
+ * whole utterance is unstable. Instead we look only at the last few spoken
+ * tokens ("what is being said now") and find the script position where that
+ * short run best fits. The cursor is monotonic — it only ever moves forward —
+ * and a move is accepted only on a confident run (≥2 tokens nearby, ≥3 for a
+ * long jump), so a lone common word or a noisy revision never drags the
+ * prompter around.
  */
-export function advanceCursor(
+export function alignCursor(
   scriptTokens: string[],
-  cursor: number,
+  committed: number,
   spokenTokens: string[],
-  lookahead: number = MATCH_LOOKAHEAD,
+  opts?: { lookahead?: number; recentTail?: number },
 ): number {
-  let position = cursor
-  for (const spoken of spokenTokens) {
-    const end = Math.min(position + lookahead, scriptTokens.length)
-    for (let i = position; i < end; i++) {
-      if (tokensMatch(scriptTokens[i], spoken)) {
-        position = i + 1
-        break
+  const lookahead = opts?.lookahead ?? ALIGN_LOOKAHEAD
+  const recentTail = opts?.recentTail ?? RECENT_TAIL
+  const tail = spokenTokens.slice(-recentTail)
+  if (tail.length === 0) return committed
+
+  const limit = Math.min(committed + lookahead, scriptTokens.length)
+  let bestEnd = committed
+  let bestScore = 0
+
+  /* For each candidate end position, walk backward counting how many of the
+     tail tokens match the script ending there, tolerating one skipped script
+     token. The nearest position wins ties (strict >), keeping moves small. */
+  for (let candidate = committed + 1; candidate <= limit; candidate++) {
+    let score = 0
+    let gaps = 0
+    let s = candidate - 1
+    let t = tail.length - 1
+    while (s >= committed && t >= 0) {
+      if (tokensMatch(scriptTokens[s], tail[t])) {
+        score++
+        s--
+        t--
+      } else {
+        if (++gaps > 1) break
+        s--
       }
     }
+    if (score > bestScore) {
+      bestScore = score
+      bestEnd = candidate
+    }
   }
-  return position
+
+  if (bestEnd <= committed) return committed
+  const minRun = bestEnd - committed > NEAR ? FAR_MIN_RUN : NEAR_MIN_RUN
+  return bestScore >= minRun ? bestEnd : committed
 }
 
 /**
