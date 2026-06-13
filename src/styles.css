@@ -40,6 +40,19 @@
   --dur-slow: 420ms;
 }
 
+/* Dark theme: override semantic tokens only. The literal ls-* base colors
+   (ls-white, ls-black, the gray ramp) stay fixed so white-on-color elements
+   and the prompter never invert. */
+.dark {
+  --bg-0: var(--ls-gray-900); /* base surface → near-black */
+  --bg-1: #2c2c2e;            /* raised surface */
+  --fg-0: var(--ls-gray-50);  /* primary text → near-white */
+  --fg-1: #98989f;            /* secondary text */
+  --line: #38383a;           /* hairline border */
+  --accent: #0a84ff;         /* iOS dark-mode blue */
+  --accent-pressed: #0070e0;
+}
+
 @theme inline {
   --color-ls-blue: var(--ls-blue);
   --color-ls-blue-pressed: var(--ls-blue-pressed);
@@ -49,6 +62,13 @@
   --color-ls-gray-50: var(--ls-gray-50);
   --color-ls-white: var(--ls-white);
   --color-ls-line: var(--ls-line-light);
+  --color-surface: var(--bg-0);
+  --color-surface-raised: var(--bg-1);
+  --color-primary: var(--fg-0);
+  --color-secondary: var(--fg-1);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-pressed: var(--accent-pressed);
 
   --font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue",
@@ -74,6 +94,13 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Theme switch: ease surface/text colors instead of hard-cutting */
+body {
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
 }
 
 /* Display headings: Light 300, tight tracking, never bold */
