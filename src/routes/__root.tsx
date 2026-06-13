@@ -17,7 +17,6 @@ export const Route = createRootRoute({
         content:
           'Professional teleprompter for the web. Paste your text, press play, record. Works offline on mobile and desktop.',
       },
-      { name: 'theme-color', content: '#000000' },
       { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'black' },
       { name: 'apple-mobile-web-app-title', content: 'Kotodama' },
@@ -55,6 +54,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Anti-FOUC: set the theme class + status-bar color before first paint.
+            Inlined and synchronous so it runs ahead of hydration. */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: required for a pre-hydration inline script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem('kotodama:theme');var d=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}m.setAttribute('content',d?'#1c1c1e':'#ffffff');}catch(e){}})();`,
+          }}
+        />
         <HeadContent />
       </head>
       <body className="font-sans antialiased">

@@ -45,11 +45,11 @@
    and the prompter never invert. */
 .dark {
   --bg-0: var(--ls-gray-900); /* base surface → near-black */
-  --bg-1: #2c2c2e;            /* raised surface */
-  --fg-0: var(--ls-gray-50);  /* primary text → near-white */
-  --fg-1: #98989f;            /* secondary text */
-  --line: #38383a;           /* hairline border */
-  --accent: #0a84ff;         /* iOS dark-mode blue */
+  --bg-1: #2c2c2e; /* raised surface */
+  --fg-0: var(--ls-gray-50); /* primary text → near-white */
+  --fg-1: #98989f; /* secondary text */
+  --line: #38383a; /* hairline border */
+  --accent: #0a84ff; /* iOS dark-mode blue */
   --accent-pressed: #0070e0;
 }
 
