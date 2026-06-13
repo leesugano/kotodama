@@ -319,7 +319,7 @@ function EditorPage() {
                     // biome-ignore lint/a11y/noAutofocus: the field was just opened by the rename action
                     autoFocus
                     aria-label={t('editor.newTitle')}
-                    className="w-full rounded-input border border-line px-2 py-1.5 text-sm text-primary outline-none focus:border-ls-blue"
+                    className="w-full rounded-input border border-line bg-surface px-2 py-1.5 text-sm text-primary outline-none focus:border-ls-blue"
                   />
                   <button
                     type="button"
