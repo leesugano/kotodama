@@ -12,6 +12,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { InstallPrompt } from '../components/InstallPrompt'
 import { Logo } from '../components/Logo'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { authClient } from '../lib/auth/client'
 import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
@@ -254,8 +255,8 @@ function EditorPage() {
 
   const sidebar = (
     <>
-      <div className="flex items-center justify-between border-b border-ls-line px-4 py-3">
-        <h2 className="text-sm font-medium text-ls-gray-900">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <h2 className="text-sm font-medium text-primary">
           {t('editor.scripts')}
         </h2>
         <button
@@ -263,14 +264,14 @@ function EditorPage() {
           onClick={newScript}
           aria-label={t('editor.newScript')}
           title={t('editor.newScript')}
-          className="rounded-btn p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:bg-ls-gray-50 hover:text-ls-gray-900"
+          className="rounded-btn p-1.5 text-secondary transition-colors duration-[140ms] hover:bg-surface-raised hover:text-primary"
         >
           <Plus size={18} strokeWidth={1.5} aria-hidden />
         </button>
       </div>
       <ul className="flex-1 overflow-y-auto py-2">
         {scripts.length === 0 && (
-          <li className="px-4 py-6 text-sm text-ls-gray-500">
+          <li className="px-4 py-6 text-sm text-secondary">
             {t('editor.empty')}
           </li>
         )}
@@ -286,7 +287,7 @@ function EditorPage() {
             <li key={script.id} className="group relative px-2">
               {confirmDeleteId === script.id ? (
                 <div className="rounded-input px-3 py-3">
-                  <p className="text-sm text-ls-gray-900">
+                  <p className="text-sm text-primary">
                     {t('editor.deleteConfirm')}
                   </p>
                   <div className="mt-2 flex gap-2">
@@ -300,7 +301,7 @@ function EditorPage() {
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(null)}
-                      className="rounded-btn px-3 py-1.5 text-xs text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                      className="rounded-btn px-3 py-1.5 text-xs text-secondary transition-colors duration-[140ms] hover:text-primary"
                     >
                       {t('editor.cancel')}
                     </button>
@@ -318,7 +319,7 @@ function EditorPage() {
                     // biome-ignore lint/a11y/noAutofocus: the field was just opened by the rename action
                     autoFocus
                     aria-label={t('editor.newTitle')}
-                    className="w-full rounded-input border border-ls-line px-2 py-1.5 text-sm text-ls-gray-900 outline-none focus:border-ls-blue"
+                    className="w-full rounded-input border border-line px-2 py-1.5 text-sm text-primary outline-none focus:border-ls-blue"
                   />
                   <button
                     type="button"
@@ -335,18 +336,20 @@ function EditorPage() {
                     type="button"
                     onClick={() => selectScript(script)}
                     className={`w-full rounded-input px-3 py-2.5 text-left transition-colors duration-[140ms] ${
-                      isActive ? 'bg-ls-gray-50' : 'hover:bg-ls-gray-50/60'
+                      isActive
+                        ? 'bg-surface-raised'
+                        : 'hover:bg-surface-raised/60'
                     }`}
                   >
-                    <span className="block truncate pr-16 text-sm font-medium text-ls-gray-900">
+                    <span className="block truncate pr-16 text-sm font-medium text-primary">
                       {script.title}
                     </span>
                     {preview && (
-                      <span className="mt-0.5 block truncate pr-16 text-xs text-ls-gray-500">
+                      <span className="mt-0.5 block truncate pr-16 text-xs text-secondary">
                         {preview}
                       </span>
                     )}
-                    <span className="mt-1 block text-xs text-ls-gray-500">
+                    <span className="mt-1 block text-xs text-secondary">
                       {formatModifiedDate(script.updatedAt)}
                     </span>
                   </button>
@@ -356,7 +359,7 @@ function EditorPage() {
                       onClick={() => startRename(script)}
                       aria-label={`${t('editor.rename')}: ${script.title}`}
                       title={t('editor.rename')}
-                      className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                      className="rounded-btn bg-surface p-1.5 text-secondary transition-colors duration-[140ms] hover:text-primary"
                     >
                       <Pencil size={14} strokeWidth={1.5} aria-hidden />
                     </button>
@@ -365,7 +368,7 @@ function EditorPage() {
                       onClick={() => duplicateScript(script)}
                       aria-label={`${t('editor.duplicate')}: ${script.title}`}
                       title={t('editor.duplicate')}
-                      className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                      className="rounded-btn bg-surface p-1.5 text-secondary transition-colors duration-[140ms] hover:text-primary"
                     >
                       <Copy size={14} strokeWidth={1.5} aria-hidden />
                     </button>
@@ -374,7 +377,7 @@ function EditorPage() {
                       onClick={() => setConfirmDeleteId(script.id)}
                       aria-label={`${t('editor.delete')}: ${script.title}`}
                       title={t('editor.delete')}
-                      className="rounded-btn bg-ls-white p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                      className="rounded-btn bg-surface p-1.5 text-secondary transition-colors duration-[140ms] hover:text-primary"
                     >
                       <Trash2 size={14} strokeWidth={1.5} aria-hidden />
                     </button>
@@ -389,8 +392,8 @@ function EditorPage() {
   )
 
   return (
-    <div className="flex h-dvh bg-ls-white">
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-ls-line md:flex">
+    <div className="flex h-dvh bg-surface">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-line md:flex">
         {sidebar}
       </aside>
 
@@ -402,13 +405,13 @@ function EditorPage() {
             onClick={() => setSidebarOpen(false)}
             className="absolute inset-0 bg-ls-black/20"
           />
-          <aside className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col border-r border-ls-line bg-ls-white">
+          <aside className="absolute inset-y-0 left-0 flex w-80 max-w-[85vw] flex-col border-r border-line bg-surface">
             <div className="flex justify-end px-2 pt-2">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(false)}
                 aria-label={t('editor.close')}
-                className="rounded-btn p-2 text-ls-gray-500"
+                className="rounded-btn p-2 text-secondary"
               >
                 <X size={18} strokeWidth={1.5} aria-hidden />
               </button>
@@ -419,33 +422,34 @@ function EditorPage() {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-ls-line px-4 py-3 md:px-6">
+        <header className="flex items-center gap-3 border-b border-line px-4 py-3 md:px-6">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
             aria-label={t('editor.openList')}
-            className="rounded-btn p-1.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 md:hidden"
+            className="rounded-btn p-1.5 text-secondary transition-colors duration-[140ms] hover:text-primary md:hidden"
           >
             <PanelLeft size={20} strokeWidth={1.5} aria-hidden />
           </button>
           <Link
             to="/"
-            className="flex items-center gap-2 text-ls-black"
+            className="flex items-center gap-2 text-primary"
             aria-label="Kotodama"
           >
             <Logo size={22} />
             <span className="display text-lg">Kotodama</span>
           </Link>
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             {session?.user ? (
               <>
-                <span className="hidden max-w-[160px] truncate text-sm text-ls-gray-500 sm:block">
+                <span className="hidden max-w-[160px] truncate text-sm text-secondary sm:block">
                   {session.user.name}
                 </span>
                 <button
                   type="button"
                   onClick={() => authClient.signOut()}
-                  className="rounded-btn px-3 py-1.5 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                  className="rounded-btn px-3 py-1.5 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary"
                 >
                   {t('editor.signOut')}
                 </button>
@@ -453,7 +457,7 @@ function EditorPage() {
             ) : (
               <Link
                 to="/sign-in"
-                className="rounded-btn px-3 py-1.5 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+                className="rounded-btn px-3 py-1.5 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary"
               >
                 {t('editor.signIn')}
               </Link>
@@ -468,17 +472,17 @@ function EditorPage() {
             onChange={(e) => handleChange(e.target.value)}
             placeholder={loaded ? t('editor.placeholder') : ''}
             aria-label={t('editor.scriptLabel')}
-            className="flex-1 resize-none border-0 bg-transparent py-6 text-lg leading-relaxed text-ls-gray-900 outline-none placeholder:text-ls-gray-500"
+            className="flex-1 resize-none border-0 bg-transparent py-6 text-lg leading-relaxed text-primary outline-none placeholder:text-secondary"
           />
         </main>
 
-        <footer className="border-t border-ls-line bg-ls-white">
+        <footer className="border-t border-line bg-surface">
           <div className="mx-auto flex w-full max-w-[900px] items-center justify-between gap-4 px-4 py-4 md:px-6">
-            <p className="text-sm text-ls-gray-500">
+            <p className="text-sm text-secondary">
               {hasText ? (
                 <>
                   {words} {words === 1 ? t('editor.word') : t('editor.words')}
-                  <span className="px-2 text-ls-line">|</span>
+                  <span className="px-2 text-line">|</span>
                   {duration} {t('editor.wpmSuffix')}
                 </>
               ) : (
@@ -489,7 +493,7 @@ function EditorPage() {
               type="button"
               onClick={handleStart}
               disabled={!hasText}
-              className="inline-flex items-center gap-2 rounded-btn bg-ls-blue px-5 py-2.5 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed active:bg-ls-blue-pressed disabled:cursor-default disabled:bg-ls-gray-50 disabled:text-ls-gray-500"
+              className="inline-flex items-center gap-2 rounded-btn bg-ls-blue px-5 py-2.5 text-sm font-medium text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed active:bg-ls-blue-pressed disabled:cursor-default disabled:bg-surface-raised disabled:text-secondary"
             >
               {t('editor.start')}
               <ArrowRight size={16} strokeWidth={1.5} aria-hidden />
