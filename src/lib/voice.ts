@@ -127,12 +127,13 @@ export function advanceCursor(
 
 /** Number of trailing spoken tokens used as the alignment anchor. */
 export const RECENT_TAIL = 8
-/** Distance (in tokens) below which a 2-word run is enough to advance. */
+/** Distance (in tokens) at or below which a 2-word run is enough to advance. */
 export const NEAR = 16
 /** How far ahead of the cursor alignment will look for a confident match. */
 export const ALIGN_LOOKAHEAD = 60
 /** Matched-token runs required to accept a near advance vs. a far jump. */
 export const NEAR_MIN_RUN = 2
+/** Matched-token run required to accept an advance beyond the near window. */
 export const FAR_MIN_RUN = 3
 
 /**

@@ -216,4 +216,13 @@ describe('alignCursor', () => {
   it('leaves the cursor unchanged for empty speech', () => {
     expect(alignCursor(script, 2, [])).toBe(2)
   })
+
+  it('returns the committed position when already at the end of the script', () => {
+    expect(alignCursor(script, script.length, ['dog'])).toBe(script.length)
+  })
+
+  it('respects a smaller lookahead option', () => {
+    // "dog" is at index 8, outside a lookahead of 5 from committed=0
+    expect(alignCursor(script, 0, ['lazy', 'dog'], { lookahead: 5 })).toBe(0)
+  })
 })
