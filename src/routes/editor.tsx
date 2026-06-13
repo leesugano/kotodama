@@ -294,7 +294,7 @@ function EditorPage() {
                     <button
                       type="button"
                       onClick={() => deleteScript(script.id)}
-                      className="rounded-btn bg-ls-gray-900 px-3 py-1.5 text-xs text-ls-white transition-colors duration-[140ms] hover:bg-ls-black"
+                      className="rounded-btn bg-primary px-3 py-1.5 text-xs text-surface transition-colors duration-[140ms] hover:opacity-90"
                     >
                       {t('editor.delete')}
                     </button>
