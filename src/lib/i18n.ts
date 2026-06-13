@@ -83,6 +83,8 @@ const en = {
   'preset.calm': 'Calm',
   'preset.natural': 'Natural',
   'preset.fast': 'Fast',
+  'theme.toDark': 'Switch to dark mode',
+  'theme.toLight': 'Switch to light mode',
 } as const
 
 export type MessageKey = keyof typeof en
@@ -159,6 +161,8 @@ const ptBR: Partial<Record<MessageKey, string>> = {
   'preset.calm': 'Calmo',
   'preset.natural': 'Natural',
   'preset.fast': 'Rápido',
+  'theme.toDark': 'Mudar para o modo escuro',
+  'theme.toLight': 'Mudar para o modo claro',
 }
 
 const ja: Partial<Record<MessageKey, string>> = {
@@ -231,6 +235,8 @@ const ja: Partial<Record<MessageKey, string>> = {
   'preset.calm': 'ゆっくり',
   'preset.natural': '自然',
   'preset.fast': '速い',
+  'theme.toDark': 'ダークモードに切り替え',
+  'theme.toLight': 'ライトモードに切り替え',
 }
 
 const dictionaries: Record<Locale, Partial<Record<MessageKey, string>>> = {

@@ -16,4 +16,9 @@ describe('i18n', () => {
     expect(t('time.minutesAgo', { n: 5 })).toBe('5min ago')
     expect(t('time.daysAgo', { n: 3 })).toBe('3 days ago')
   })
+
+  it('exposes theme toggle labels', () => {
+    expect(t('theme.toDark')).toBe('Switch to dark mode')
+    expect(t('theme.toLight')).toBe('Switch to light mode')
+  })
 })
