@@ -171,6 +171,12 @@ body {
   animation: voice-pulse 1.6s var(--ease-out) infinite;
 }
 
+/* Already-spoken words fade back so the speaker sees their position */
+.spoken {
+  opacity: 0.4;
+  transition: opacity 0.3s var(--ease-out);
+}
+
 /* Prompter demo on the landing: continuous scroll loop */
 @keyframes demo-scroll {
   from {

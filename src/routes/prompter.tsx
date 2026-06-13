@@ -227,6 +227,20 @@ function Prompter({ script }: { script: Script }) {
   const scriptIndexRef = useRef(scriptIndex)
   scriptIndexRef.current = scriptIndex
 
+  /* Cache word spans by index for O(1) dimming and reset the spoken boundary
+     whenever the rendered script changes. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-run when the rendered script changes; the effect reads the DOM, not sections directly
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+    const arr: HTMLElement[] = []
+    for (const el of content.querySelectorAll<HTMLElement>('[data-wi]')) {
+      arr[Number(el.dataset.wi)] = el
+    }
+    wordSpansRef.current = arr
+    spokenWordRef.current = -1
+  }, [sections])
+
   const showNotice = useCallback((message: string) => {
     setNotice(message)
     setControlsVisible(true)
@@ -257,6 +271,8 @@ function Prompter({ script }: { script: Script }) {
   const voiceCursorRef = useRef(0)
   const voiceTargetRef = useRef<number | null>(null)
   const voiceActiveRef = useRef(false)
+  const wordSpansRef = useRef<HTMLElement[]>([])
+  const spokenWordRef = useRef(-1)
   const eyeLineRef = useRef(eyeLine)
   const eyeLinePositionRef = useRef(eyeLinePosition)
   eyeLineRef.current = eyeLine
@@ -267,6 +283,24 @@ function Prompter({ script }: { script: Script }) {
       eyeLineRef.current ? eyeLinePositionRef.current / 100 : VOICE_ANCHOR,
     [],
   )
+
+  /* Dims every word up to `wordIndex` (inclusive) and un-dims the rest.
+     Idempotent and direction-aware so re-syncing backward clears stale dimming.
+     Uses the cached span array to avoid a React re-render every utterance. */
+  const setSpokenBoundary = useCallback((wordIndex: number) => {
+    const spans = wordSpansRef.current
+    const prev = spokenWordRef.current
+    if (wordIndex > prev) {
+      for (let i = prev + 1; i <= wordIndex; i++) {
+        spans[i]?.classList.add('spoken')
+      }
+    } else if (wordIndex < prev) {
+      for (let i = wordIndex + 1; i <= prev; i++) {
+        spans[i]?.classList.remove('spoken')
+      }
+    }
+    spokenWordRef.current = wordIndex
+  }, [])
 
   /* When voice tracking starts mid-script, align the cursor with whatever
      word currently sits on the anchor line instead of matching from the top */
@@ -293,7 +327,8 @@ function Prompter({ script }: { script: Script }) {
     }
     voiceCursorRef.current = cursor
     voiceTargetRef.current = null
-  }, [voiceAnchor])
+    setSpokenBoundary(cursor > 0 ? index.tokenToWord[cursor - 1] : -1)
+  }, [voiceAnchor, setSpokenBoundary])
 
   const handleUtterance = useCallback(
     ({ tokens }: UtteranceEvent) => {
@@ -302,6 +337,7 @@ function Prompter({ script }: { script: Script }) {
       if (next === voiceCursorRef.current) return
       voiceCursorRef.current = next
       const wordIndex = index.tokenToWord[next - 1]
+      setSpokenBoundary(wordIndex)
       const stage = stageRef.current
       const content = contentRef.current
       const span = content?.querySelector<HTMLElement>(
@@ -312,7 +348,7 @@ function Prompter({ script }: { script: Script }) {
         span.getBoundingClientRect().top - content.getBoundingClientRect().top
       voiceTargetRef.current = offset - stage.clientHeight * voiceAnchor()
     },
-    [voiceAnchor],
+    [voiceAnchor, setSpokenBoundary],
   )
 
   const voiceListening = voice && voiceSupported && playing
@@ -464,8 +500,9 @@ function Prompter({ script }: { script: Script }) {
     posRef.current = 0
     voiceCursorRef.current = 0
     voiceTargetRef.current = null
+    setSpokenBoundary(-1)
     showControls()
-  }, [showControls])
+  }, [showControls, setSpokenBoundary])
 
   const changeSpeed = useCallback(
     (delta: number) => {
