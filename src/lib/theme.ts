@@ -55,7 +55,13 @@ export function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
-/** Apply the effective theme to <html> and the mobile status-bar meta. */
+/**
+ * Apply the effective theme to <html> and the mobile status-bar meta.
+ * Call at runtime once the document exists (e.g. inside a React effect or a
+ * click handler). The anti-FOUC inline script creates the <meta name="theme-color">
+ * before paint, so this reuses that element rather than adding a duplicate; it
+ * only creates one as a fallback if none exists yet.
+ */
 export function applyTheme(effective: ThemePreference): void {
   if (typeof document === 'undefined') return
   document.documentElement.classList.toggle('dark', effective === 'dark')
