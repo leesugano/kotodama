@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   advanceCursor,
+  alignCursor,
   buildScriptIndex,
   matchSpeechLang,
   resolveSpeechLang,
@@ -156,5 +157,63 @@ describe('resolveSpeechLang', () => {
 
   it('falls back to en-US outside the browser', () => {
     expect(resolveSpeechLang('')).toBe('en-US')
+  })
+})
+
+describe('alignCursor', () => {
+  const script = tokenize('the quick brown fox jumps over the lazy dog')
+  const long = tokenize(
+    'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec romeo sierra tango',
+  )
+
+  it('advances on a confident run of words', () => {
+    expect(alignCursor(script, 0, ['the', 'quick', 'brown'])).toBe(3)
+  })
+
+  it('advances on a two-word run within the near window', () => {
+    expect(alignCursor(script, 0, ['the', 'quick'])).toBe(2)
+  })
+
+  it('does not move on a lone common word that matches several places', () => {
+    // "the" appears at indices 0 and 6; one word is not a confident run
+    expect(alignCursor(script, 0, ['the'])).toBe(0)
+  })
+
+  it('never recedes below the committed cursor', () => {
+    // all three words are behind committed=5; cursor must not jump back
+    expect(alignCursor(script, 5, ['the', 'quick', 'brown'])).toBe(5)
+  })
+
+  it('ignores a lone word that matches behind/at the cursor', () => {
+    expect(alignCursor(script, 5, ['the'])).toBe(5)
+  })
+
+  it('recovers when one script word was misrecognized (one gap)', () => {
+    // "brown" skipped: the quick __ fox
+    expect(alignCursor(script, 0, ['the', 'quick', 'fox'])).toBe(4)
+  })
+
+  it('repositions on a long jump only with a 3-word run', () => {
+    // romeo/sierra/tango are at indices 17/18/19, far past the near window
+    expect(alignCursor(long, 0, ['romeo', 'sierra', 'tango'])).toBe(20)
+  })
+
+  it('does not take a long jump on only two matched words', () => {
+    expect(alignCursor(long, 0, ['sierra', 'tango'])).toBe(0)
+  })
+
+  it('aligns interim prefixes', () => {
+    expect(alignCursor(script, 0, ['the', 'quick', 'brow'])).toBe(3)
+  })
+
+  it('aligns CJK per-character tokens', () => {
+    const jp = tokenize('これは テスト です')
+    expect(alignCursor(jp, 0, tokenize('これは テスト'))).toBe(
+      tokenize('これは').length + tokenize('テスト').length,
+    )
+  })
+
+  it('leaves the cursor unchanged for empty speech', () => {
+    expect(alignCursor(script, 2, [])).toBe(2)
   })
 })
