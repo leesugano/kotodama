@@ -46,7 +46,7 @@ import {
   saveSettings,
 } from '../lib/settings'
 import {
-  advanceCursor,
+  alignCursor,
   buildScriptIndex,
   resolveSpeechLang,
   SPEECH_LANGUAGES,
@@ -251,12 +251,10 @@ function Prompter({ script }: { script: Script }) {
     }
   }, [camera, cameraDenied, showNotice])
 
-  /* Voice tracking state: the cursor walks the token list, the target is the
-     scroll position that puts the last matched word on the anchor line. The
-     baseline marks where the current utterance started, so every interim
-     revision of the transcript can be re-matched from a stable point. */
+  /* Voice tracking state: the cursor walks the token list monotonically, the
+     target is the scroll position that puts the last matched word on the
+     anchor line. */
   const voiceCursorRef = useRef(0)
-  const utteranceBaseRef = useRef(0)
   const voiceTargetRef = useRef<number | null>(null)
   const voiceActiveRef = useRef(false)
   const eyeLineRef = useRef(eyeLine)
@@ -294,18 +292,14 @@ function Prompter({ script }: { script: Script }) {
       }
     }
     voiceCursorRef.current = cursor
-    utteranceBaseRef.current = cursor
     voiceTargetRef.current = null
   }, [voiceAnchor])
 
   const handleUtterance = useCallback(
-    ({ tokens, isFinal, isNew }: UtteranceEvent) => {
+    ({ tokens }: UtteranceEvent) => {
       const index = scriptIndexRef.current
-      /* A new utterance starts matching from wherever the cursor is now */
-      if (isNew) utteranceBaseRef.current = voiceCursorRef.current
-      const next = advanceCursor(index.tokens, utteranceBaseRef.current, tokens)
-      if (isFinal) utteranceBaseRef.current = next
-      if (next === voiceCursorRef.current || next === 0) return
+      const next = alignCursor(index.tokens, voiceCursorRef.current, tokens)
+      if (next === voiceCursorRef.current) return
       voiceCursorRef.current = next
       const wordIndex = index.tokenToWord[next - 1]
       const stage = stageRef.current
@@ -469,7 +463,6 @@ function Prompter({ script }: { script: Script }) {
   const restart = useCallback(() => {
     posRef.current = 0
     voiceCursorRef.current = 0
-    utteranceBaseRef.current = 0
     voiceTargetRef.current = null
     showControls()
   }, [showControls])
