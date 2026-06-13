@@ -94,10 +94,7 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Theme switch: ease surface/text colors instead of hard-cutting */
-body {
+  /* Theme switch: ease surface/text colors instead of hard-cutting */
   transition:
     background-color var(--dur-base) var(--ease-out),
     color var(--dur-base) var(--ease-out);
