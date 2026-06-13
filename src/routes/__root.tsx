@@ -1,4 +1,9 @@
-import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
+import {
+  createRootRoute,
+  HeadContent,
+  ScriptOnce,
+  Scripts,
+} from '@tanstack/react-router'
 import { useEffect } from 'react'
 
 import appCss from '../styles.css?url'
@@ -34,6 +39,11 @@ export const Route = createRootRoute({
 
 const CANONICAL_HOST = 'kotodama.leesugano.com'
 
+/* Anti-FOUC: applied before paint by ScriptOnce at the top of <body>, so the
+   theme class and status-bar color are set before the body is rendered. Mirrors
+   the logic in lib/theme.ts (THEME_KEY 'kotodama:theme', THEME_COLORS). */
+const themeScript = `(function(){try{var p=localStorage.getItem('kotodama:theme');var d=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}m.setAttribute('content',d?'#1c1c1e':'#ffffff');}catch(e){}})();`
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   /* Canonical domain: workers.dev stays up but redirects here */
   useEffect(() => {
@@ -52,22 +62,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    // suppressHydrationWarning: the anti-FOUC script below sets the `dark` class
-    // on <html> before hydration, so the client's class intentionally differs
-    // from the server HTML. React suppresses this one level deep.
+    // suppressHydrationWarning: ScriptOnce sets the `dark` class on <html>
+    // before hydration, so the client's class intentionally differs from the
+    // server HTML. React suppresses this one level deep.
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Anti-FOUC: set the theme class + status-bar color before first paint.
-            Inlined and synchronous so it runs ahead of hydration. */}
-        <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: required for a pre-hydration inline script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=localStorage.getItem('kotodama:theme');var d=p==='dark'||(p!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.setAttribute('name','theme-color');document.head.appendChild(m);}m.setAttribute('content',d?'#1c1c1e':'#ffffff');}catch(e){}})();`,
-          }}
-        />
         <HeadContent />
       </head>
       <body className="font-sans antialiased">
+        <ScriptOnce>{themeScript}</ScriptOnce>
         {children}
         <Scripts />
       </body>
