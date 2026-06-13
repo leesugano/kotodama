@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useEffect } from 'react'
 import { Logo } from '../components/Logo'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 export const Route = createFileRoute('/')({ component: LandingPage })
 
@@ -110,27 +111,28 @@ function LandingPage() {
   }, [])
 
   return (
-    <div className="bg-ls-white text-ls-gray-900">
-      <header className="sticky top-0 z-40 border-b border-ls-line bg-ls-white/90 backdrop-blur">
+    <div className="bg-surface text-primary">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur">
         <nav className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
           <Link
             to="/"
-            className="flex items-center gap-2 text-ls-black"
+            className="flex items-center gap-2 text-primary"
             aria-label="Kotodama"
           >
             <Logo size={24} />
             <span className="display text-xl">Kotodama</span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
             <a
               href="#how-it-works"
-              className="hidden rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 sm:block"
+              className="hidden rounded-btn px-3 py-2 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary sm:block"
             >
               How it works
             </a>
             <a
               href="#shortcuts"
-              className="hidden rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900 sm:block"
+              className="hidden rounded-btn px-3 py-2 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary sm:block"
             >
               Shortcuts
             </a>
@@ -139,13 +141,13 @@ function LandingPage() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="View on GitHub"
-              className="rounded-btn p-2 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+              className="rounded-btn p-2 text-secondary transition-colors duration-[140ms] hover:text-primary"
             >
               <Github size={18} strokeWidth={1.5} aria-hidden />
             </a>
             <Link
               to="/sign-in"
-              className="rounded-btn px-3 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+              className="rounded-btn px-3 py-2 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary"
             >
               Sign in
             </Link>
@@ -170,13 +172,13 @@ function LandingPage() {
               Open source, free, no account required
             </p>
             <h1
-              className="display rise mt-4 text-5xl leading-[1.05] text-ls-black sm:text-6xl"
+              className="display rise mt-4 text-5xl leading-[1.05] text-primary sm:text-6xl"
               style={{ animationDelay: '80ms' }}
             >
               The teleprompter that lives in your browser
             </h1>
             <p
-              className="rise mx-auto mt-6 max-w-[560px] text-lg leading-relaxed text-ls-gray-500"
+              className="rise mx-auto mt-6 max-w-[560px] text-lg leading-relaxed text-secondary"
               style={{ animationDelay: '160ms' }}
             >
               Paste the text, press play, record. Works on mobile and desktop,
@@ -197,7 +199,7 @@ function LandingPage() {
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-btn border border-ls-line px-6 py-3 text-sm font-medium text-ls-gray-900 transition-colors duration-[140ms] hover:bg-ls-gray-50"
+                className="inline-flex items-center gap-2 rounded-btn border border-line px-6 py-3 text-sm font-medium text-primary transition-colors duration-[140ms] hover:bg-surface-raised"
               >
                 <Github size={16} strokeWidth={1.5} aria-hidden />
                 View on GitHub
@@ -232,13 +234,13 @@ function LandingPage() {
         </section>
 
         {/* How it works */}
-        <section id="how-it-works" className="border-t border-ls-line">
+        <section id="how-it-works" className="border-t border-line">
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
-              <h2 className="display text-3xl text-ls-black sm:text-4xl">
+              <h2 className="display text-3xl text-primary sm:text-4xl">
                 From text to take in three steps
               </h2>
-              <p className="mt-3 max-w-[520px] text-ls-gray-500">
+              <p className="mt-3 max-w-[520px] text-secondary">
                 The idea is simple: from first visit to text scrolling on screen
                 in under 30 seconds.
               </p>
@@ -262,13 +264,13 @@ function LandingPage() {
                 ],
               ].map(([step, title, description]) => (
                 <li key={step} className="reveal" data-reveal>
-                  <span className="flex h-10 w-10 items-center justify-center rounded-btn bg-ls-gray-50 text-sm font-medium text-ls-blue">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-btn bg-surface-raised text-sm font-medium text-ls-blue">
                     {step}
                   </span>
-                  <h3 className="mt-4 text-lg font-medium text-ls-gray-900">
+                  <h3 className="mt-4 text-lg font-medium text-primary">
                     {title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ls-gray-500">
+                  <p className="mt-2 text-sm leading-relaxed text-secondary">
                     {description}
                   </p>
                 </li>
@@ -278,13 +280,13 @@ function LandingPage() {
         </section>
 
         {/* Features */}
-        <section className="border-t border-ls-line bg-ls-gray-50">
+        <section className="border-t border-line bg-surface-raised">
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
-              <h2 className="display text-3xl text-ls-black sm:text-4xl">
+              <h2 className="display text-3xl text-primary sm:text-4xl">
                 Built for people who actually record
               </h2>
-              <p className="mt-3 max-w-[520px] text-ls-gray-500">
+              <p className="mt-3 max-w-[520px] text-secondary">
                 Content creators, teachers, presenters. Everything a
                 teleprompter needs, nothing that gets in the way.
               </p>
@@ -293,7 +295,7 @@ function LandingPage() {
               {FEATURES.map((feature) => (
                 <article
                   key={feature.title}
-                  className="reveal rounded-card border border-ls-line bg-ls-white p-6"
+                  className="reveal rounded-card border border-line bg-surface p-6"
                   data-reveal
                 >
                   <feature.icon
@@ -302,10 +304,10 @@ function LandingPage() {
                     className="text-ls-blue"
                     aria-hidden
                   />
-                  <h3 className="mt-4 font-medium text-ls-gray-900">
+                  <h3 className="mt-4 font-medium text-primary">
                     {feature.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-ls-gray-500">
+                  <p className="mt-2 text-sm leading-relaxed text-secondary">
                     {feature.description}
                   </p>
                 </article>
@@ -315,27 +317,27 @@ function LandingPage() {
         </section>
 
         {/* Shortcuts */}
-        <section id="shortcuts" className="border-t border-ls-line">
+        <section id="shortcuts" className="border-t border-line">
           <div className="mx-auto max-w-[1200px] px-6 py-20">
             <div className="reveal" data-reveal>
-              <h2 className="display text-3xl text-ls-black sm:text-4xl">
+              <h2 className="display text-3xl text-primary sm:text-4xl">
                 Full control without taking your eyes off the text
               </h2>
             </div>
             <div className="mt-12 grid gap-10 md:grid-cols-2">
               <div className="reveal" data-reveal>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-ls-gray-500">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-secondary">
                   <Keyboard size={16} strokeWidth={1.5} aria-hidden />
                   On desktop
                 </h3>
-                <ul className="mt-4 divide-y divide-ls-line border-y border-ls-line">
+                <ul className="mt-4 divide-y divide-line border-y border-line">
                   {SHORTCUTS.map(([key, action]) => (
                     <li
                       key={key}
                       className="flex items-center justify-between py-3"
                     >
-                      <span className="text-sm text-ls-gray-500">{action}</span>
-                      <kbd className="rounded-btn border border-ls-line bg-ls-gray-50 px-2.5 py-1 font-sans text-xs text-ls-gray-900">
+                      <span className="text-sm text-secondary">{action}</span>
+                      <kbd className="rounded-btn border border-line bg-surface-raised px-2.5 py-1 font-sans text-xs text-primary">
                         {key}
                       </kbd>
                     </li>
@@ -343,20 +345,18 @@ function LandingPage() {
                 </ul>
               </div>
               <div className="reveal" data-reveal>
-                <h3 className="flex items-center gap-2 text-sm font-medium text-ls-gray-500">
+                <h3 className="flex items-center gap-2 text-sm font-medium text-secondary">
                   <MonitorSmartphone size={16} strokeWidth={1.5} aria-hidden />
                   On mobile
                 </h3>
-                <ul className="mt-4 divide-y divide-ls-line border-y border-ls-line">
+                <ul className="mt-4 divide-y divide-line border-y border-line">
                   {GESTURES.map(([gesture, action]) => (
                     <li
                       key={gesture}
                       className="flex items-center justify-between py-3"
                     >
-                      <span className="text-sm text-ls-gray-500">{action}</span>
-                      <span className="text-sm text-ls-gray-900">
-                        {gesture}
-                      </span>
+                      <span className="text-sm text-secondary">{action}</span>
+                      <span className="text-sm text-primary">{gesture}</span>
                     </li>
                   ))}
                 </ul>
@@ -366,7 +366,7 @@ function LandingPage() {
         </section>
 
         {/* Privacy and open source */}
-        <section className="border-t border-ls-line">
+        <section className="border-t border-line">
           <div className="mx-auto max-w-[760px] px-6 py-20 text-center">
             <div className="reveal" data-reveal>
               <Lock
@@ -375,10 +375,10 @@ function LandingPage() {
                 className="mx-auto text-ls-blue"
                 aria-hidden
               />
-              <h2 className="display mt-4 text-3xl text-ls-black sm:text-4xl">
+              <h2 className="display mt-4 text-3xl text-primary sm:text-4xl">
                 Private by architecture
               </h2>
-              <p className="mx-auto mt-4 max-w-[560px] leading-relaxed text-ls-gray-500">
+              <p className="mx-auto mt-4 max-w-[560px] leading-relaxed text-secondary">
                 Kotodama has no script database in the cloud: what you write
                 stays in your browser storage. The account is optional and
                 exists only to sync scripts across devices in the future. The
@@ -398,9 +398,9 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-ls-line">
+      <footer className="border-t border-line">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-8">
-          <p className="text-sm text-ls-gray-500">
+          <p className="text-sm text-secondary">
             Kotodama. Made by Lee Sugano, open to everyone.
           </p>
           <div className="flex items-center gap-4">
@@ -408,11 +408,11 @@ function LandingPage() {
               href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-gray-900"
+              className="text-sm text-secondary transition-colors duration-[140ms] hover:text-primary"
             >
               GitHub
             </a>
-            <span className="text-sm text-ls-gray-500">MIT license</span>
+            <span className="text-sm text-secondary">MIT license</span>
           </div>
         </div>
       </footer>
