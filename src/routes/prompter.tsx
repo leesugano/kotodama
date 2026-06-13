@@ -337,7 +337,7 @@ function Prompter({ script }: { script: Script }) {
       if (next === voiceCursorRef.current) return
       voiceCursorRef.current = next
       const wordIndex = index.tokenToWord[next - 1]
-      setSpokenBoundary(wordIndex)
+      if (wordIndex !== undefined) setSpokenBoundary(wordIndex)
       const stage = stageRef.current
       const content = contentRef.current
       const span = content?.querySelector<HTMLElement>(
