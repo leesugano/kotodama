@@ -45,6 +45,10 @@ function EditorPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [saveStatus, setSaveStatus] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle')
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const metaRef = useRef({ createdAt: 0, customTitle: false, title: '' })
   const contentRef = useRef('')
@@ -99,7 +103,14 @@ function EditorPage() {
       createdAt: meta.createdAt,
       updatedAt: Date.now(),
     }
-    await getScriptRepository().save(script)
+    try {
+      await getScriptRepository().save(script)
+      setSaveStatus('saved')
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
+      savedTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000)
+    } catch {
+      setSaveStatus('error')
+    }
     setScripts((prev) =>
       sortByUpdated([script, ...prev.filter((s) => s.id !== id)]),
     )
@@ -118,6 +129,7 @@ function EditorPage() {
   const handleChange = useCallback(
     (text: string) => {
       setContent(text)
+      setSaveStatus('saving')
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
         saveTimerRef.current = null
@@ -130,6 +142,7 @@ function EditorPage() {
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
     }
   }, [])
 
@@ -478,7 +491,7 @@ function EditorPage() {
 
         <footer className="border-t border-line bg-surface">
           <div className="mx-auto flex w-full max-w-[900px] items-center justify-between gap-4 px-4 py-4 md:px-6">
-            <p className="text-sm text-secondary">
+            <p className="flex items-center gap-2 text-sm text-secondary">
               {hasText ? (
                 <>
                   {words} {words === 1 ? t('editor.word') : t('editor.words')}
@@ -487,6 +500,18 @@ function EditorPage() {
                 </>
               ) : (
                 t('editor.startHint')
+              )}
+              {saveStatus === 'saving' && (
+                <span className="text-secondary">· {t('editor.saving')}</span>
+              )}
+              {saveStatus === 'saved' && (
+                <span className="inline-flex items-center gap-1 text-secondary">
+                  · <Check size={13} strokeWidth={1.5} aria-hidden />{' '}
+                  {t('editor.saved')}
+                </span>
+              )}
+              {saveStatus === 'error' && (
+                <span className="text-ls-blue">· {t('editor.saveError')}</span>
               )}
             </p>
             <button
