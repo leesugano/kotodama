@@ -3,6 +3,7 @@ import {
   alignCursor,
   buildScriptIndex,
   matchSpeechLang,
+  nudgeCursor,
   resolveSpeechLang,
   SPEECH_LANGUAGES,
   tokenize,
@@ -40,6 +41,16 @@ describe('tokenize', () => {
 
   it('keeps numbers', () => {
     expect(tokenize('Take 2 begins')).toEqual(['take', '2', 'begins'])
+  })
+
+  describe('tokenize ignores markers', () => {
+    it('drops standalone pause/breath markers', () => {
+      expect(tokenize('hello [pause] world')).toEqual(['hello', 'world'])
+      expect(tokenize('[BREATH]')).toEqual([])
+    })
+    it('keeps emphasized words spoken', () => {
+      expect(tokenize('a **big** day')).toEqual(['a', 'big', 'day'])
+    })
   })
 })
 
@@ -120,6 +131,15 @@ describe('resolveSpeechLang', () => {
 
   it('falls back to en-US outside the browser', () => {
     expect(resolveSpeechLang('')).toBe('en-US')
+  })
+})
+
+describe('nudgeCursor', () => {
+  it('moves and clamps', () => {
+    expect(nudgeCursor(5, 1, 10)).toBe(6)
+    expect(nudgeCursor(5, -1, 10)).toBe(4)
+    expect(nudgeCursor(0, -1, 10)).toBe(0)
+    expect(nudgeCursor(10, 1, 10)).toBe(10)
   })
 })
 

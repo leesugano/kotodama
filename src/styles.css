@@ -100,6 +100,12 @@ body {
     color var(--dur-base) var(--ease-out);
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* Display headings: Light 300, tight tracking, never bold */
 .display {
   font-weight: 300;
@@ -177,6 +183,19 @@ body {
   transition: opacity 0.3s var(--ease-out);
 }
 
+.marker {
+  display: inline-block;
+  margin: 0 0.25em;
+  padding: 0.05em 0.5em;
+  border-radius: 999px;
+  font-size: 0.55em;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: var(--ls-gray-500);
+  border: 1px solid color-mix(in srgb, var(--ls-white) 20%, transparent);
+}
+
 /* Prompter demo on the landing: continuous scroll loop */
 @keyframes demo-scroll {
   from {
@@ -189,6 +208,10 @@ body {
 
 .demo-scroll {
   animation: demo-scroll 22s linear infinite;
+}
+
+.reader-serif {
+  font-family: Georgia, "Times New Roman", serif;
 }
 
 @media (prefers-reduced-motion: reduce) {

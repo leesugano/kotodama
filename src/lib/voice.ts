@@ -17,7 +17,9 @@ const CJK_RE =
  */
 export function tokenize(text: string): string[] {
   const tokens: string[] = []
+  const MARKER = /^\[(pause|breath)\]$/i
   for (const raw of text.split(/\s+/)) {
+    if (MARKER.test(raw)) continue
     const cleaned = raw
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -259,4 +261,13 @@ export function resolveSpeechLang(stored: string): string {
   const browserTag =
     typeof navigator !== 'undefined' ? (navigator.language ?? '') : ''
   return matchSpeechLang(browserTag) ?? 'en-US'
+}
+
+/** Moves the voice cursor by delta words, clamped to the token range. */
+export function nudgeCursor(
+  cursor: number,
+  delta: number,
+  length: number,
+): number {
+  return Math.max(0, Math.min(length, cursor + delta))
 }

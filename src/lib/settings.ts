@@ -23,6 +23,14 @@ export interface PrompterSettings {
    * Named speechLang in storage so legacy voiceLang values (always 'en-US')
    * are dropped and existing users get the automatic default. */
   speechLang: string
+  /** Reader line-height multiplier */
+  lineHeight: number
+  /** Reader column max width in px */
+  columnWidth: number
+  /** Reader font family */
+  fontFamily: 'sans' | 'serif'
+  /** Words per minute used for the editor duration estimate */
+  wpm: number
 }
 
 export const SPEED_MIN = 10
@@ -37,6 +45,12 @@ export const EYELINE_MIN = 15
 export const EYELINE_MAX = 85
 export const MARGIN_MIN = 0
 export const MARGIN_MAX = 25
+export const LINE_HEIGHT_MIN = 1.2
+export const LINE_HEIGHT_MAX = 2
+export const COLUMN_WIDTH_MIN = 600
+export const COLUMN_WIDTH_MAX = 1100
+export const WPM_MIN = 80
+export const WPM_MAX = 260
 
 /** Named speed presets: labels come from i18n (preset.calm etc.) */
 export const SPEED_PRESETS = [
@@ -57,6 +71,10 @@ export const DEFAULT_SETTINGS: PrompterSettings = {
   camera: false,
   voice: false,
   speechLang: '',
+  lineHeight: 1.45,
+  columnWidth: 900,
+  fontFamily: 'sans',
+  wpm: 140,
 }
 
 const SETTINGS_KEY = 'kotodama:settings'
@@ -84,6 +102,15 @@ export function clampEyeLinePosition(value: number): number {
 
 export function clampMargin(value: number): number {
   return clamp(MARGIN_MIN, MARGIN_MAX, value)
+}
+export function clampLineHeight(value: number): number {
+  return clamp(LINE_HEIGHT_MIN, LINE_HEIGHT_MAX, value)
+}
+export function clampColumnWidth(value: number): number {
+  return clamp(COLUMN_WIDTH_MIN, COLUMN_WIDTH_MAX, value)
+}
+export function clampWpm(value: number): number {
+  return Math.round(clamp(WPM_MIN, WPM_MAX, value))
 }
 
 function numberOr(fallback: number, value: unknown): number {
@@ -116,6 +143,14 @@ export function loadSettings(): PrompterSettings {
       voice: parsed.voice === true,
       speechLang:
         typeof parsed.speechLang === 'string' ? parsed.speechLang : '',
+      lineHeight: clampLineHeight(
+        numberOr(DEFAULT_SETTINGS.lineHeight, parsed.lineHeight),
+      ),
+      columnWidth: clampColumnWidth(
+        numberOr(DEFAULT_SETTINGS.columnWidth, parsed.columnWidth),
+      ),
+      fontFamily: parsed.fontFamily === 'serif' ? 'serif' : 'sans',
+      wpm: clampWpm(numberOr(DEFAULT_SETTINGS.wpm, parsed.wpm)),
     }
   } catch {
     return DEFAULT_SETTINGS

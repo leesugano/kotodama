@@ -25,17 +25,24 @@ import { useWakeLock } from '../hooks/useWakeLock'
 import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
+import { scrubRatioToPos } from '../lib/scroll'
 import {
+  COLUMN_WIDTH_MAX,
+  COLUMN_WIDTH_MIN,
   COUNTDOWN_MAX,
   COUNTDOWN_MIN,
+  clampColumnWidth,
   clampCountdown,
   clampEyeLinePosition,
   clampFontSize,
+  clampLineHeight,
   clampMargin,
   clampSpeed,
   EYELINE_MAX,
   EYELINE_MIN,
   FONT_STEP,
+  LINE_HEIGHT_MAX,
+  LINE_HEIGHT_MIN,
   loadSettings,
   MARGIN_MAX,
   MARGIN_MIN,
@@ -45,9 +52,11 @@ import {
   SPEED_STEP,
   saveSettings,
 } from '../lib/settings'
+import { formatClock, layoutScript } from '../lib/text'
 import {
   alignCursor,
   buildScriptIndex,
+  nudgeCursor,
   resolveSpeechLang,
   SPEECH_LANGUAGES,
 } from '../lib/voice'
@@ -63,8 +72,6 @@ export const Route = createFileRoute('/prompter')({
 const CONTROLS_HIDE_DELAY = 3000
 /* Max delta per frame: avoids a jump when returning from a background tab */
 const MAX_FRAME_DELTA = 0.1
-/* A standalone line with 3+ hyphens splits the script into sections */
-const SECTION_BREAK = /^[\t ]*-{3,}[\t ]*$/m
 /* Where the spoken word should sit on screen when voice tracking scrolls */
 const VOICE_ANCHOR = 0.4
 /* How fast the scroll converges on the voice target (per second) */
@@ -118,34 +125,6 @@ function PrompterPage() {
   return <Prompter script={script} />
 }
 
-/* A section rendered as alternating word and whitespace chunks; words carry
-   a global index so voice tracking can map a match back to a DOM node */
-interface SectionChunks {
-  chunks: Array<{ text: string; wordIndex: number | null }>
-}
-
-function splitSections(content: string): {
-  sections: SectionChunks[]
-  words: string[]
-} {
-  const words: string[] = []
-  const sections = content
-    .split(SECTION_BREAK)
-    .map((part) => part.replace(/^\n+|\n+$/g, ''))
-    .filter((part) => part.length > 0)
-    .map((part) => {
-      const chunks = part.split(/(\s+)/).map((text) => {
-        if (!text || /^\s+$/.test(text)) {
-          return { text, wordIndex: null }
-        }
-        words.push(text)
-        return { text, wordIndex: words.length - 1 }
-      })
-      return { chunks }
-    })
-  return { sections, words }
-}
-
 function Prompter({ script }: { script: Script }) {
   const navigate = useNavigate()
   const initialSettings = useRef(loadSettings()).current
@@ -160,6 +139,8 @@ function Prompter({ script }: { script: Script }) {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const elapsedRef = useRef(0)
+  const lastTimeWriteRef = useRef(0)
 
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(initialSettings.speed)
@@ -175,11 +156,20 @@ function Prompter({ script }: { script: Script }) {
   const [camera, setCamera] = useState(initialSettings.camera)
   const [voice, setVoice] = useState(initialSettings.voice)
   const [voiceLang, setVoiceLang] = useState(initialSettings.speechLang)
+  const [lineHeight, setLineHeight] = useState(initialSettings.lineHeight)
+  const [columnWidth, setColumnWidth] = useState(initialSettings.columnWidth)
+  const [fontFamily, setFontFamily] = useState(initialSettings.fontFamily)
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{
+    message: string
+    retry?: () => void
+  } | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [progressPct, setProgressPct] = useState(0)
+  const [ended, setEnded] = useState(false)
 
   const voiceSupported = useMemo(isSpeechRecognitionSupported, [])
 
@@ -189,6 +179,7 @@ function Prompter({ script }: { script: Script }) {
 
   useWakeLock()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: initialSettings is a stable useRef().current; wpm is read-once and never changes
   useEffect(() => {
     saveSettings({
       speed,
@@ -202,6 +193,10 @@ function Prompter({ script }: { script: Script }) {
       camera,
       voice,
       speechLang: voiceLang,
+      lineHeight,
+      columnWidth,
+      fontFamily,
+      wpm: initialSettings.wpm,
     })
   }, [
     speed,
@@ -215,12 +210,15 @@ function Prompter({ script }: { script: Script }) {
     camera,
     voice,
     voiceLang,
+    lineHeight,
+    columnWidth,
+    fontFamily,
   ])
 
   /* Sections: `---` lines become visual separators instead of text. Words
      are indexed so speech matches can be mapped back to a pixel position. */
   const { sections, words } = useMemo(
-    () => splitSections(script.content),
+    () => layoutScript(script.content),
     [script.content],
   )
   const scriptIndex = useMemo(() => buildScriptIndex(words), [words])
@@ -241,14 +239,16 @@ function Prompter({ script }: { script: Script }) {
     spokenWordRef.current = -1
   }, [sections])
 
-  const showNotice = useCallback((message: string) => {
-    setNotice(message)
+  const showNotice = useCallback((message: string, retry?: () => void) => {
+    setNotice({ message, retry })
     setControlsVisible(true)
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
-    noticeTimerRef.current = setTimeout(
-      () => setNotice(null),
-      NOTICE_HIDE_DELAY,
-    )
+    if (!retry) {
+      noticeTimerRef.current = setTimeout(
+        () => setNotice(null),
+        NOTICE_HIDE_DELAY,
+      )
+    }
   }, [])
 
   /* Camera self-view: stream lives behind the text with a dark scrim */
@@ -261,7 +261,7 @@ function Prompter({ script }: { script: Script }) {
   useEffect(() => {
     if (camera && cameraDenied) {
       setCamera(false)
-      showNotice(t('prompter.cameraDenied'))
+      showNotice(t('prompter.cameraDenied'), () => setCamera(true))
     }
   }, [camera, cameraDenied, showNotice])
 
@@ -336,6 +336,10 @@ function Prompter({ script }: { script: Script }) {
       const next = alignCursor(index.tokens, voiceCursorRef.current, tokens)
       if (next === voiceCursorRef.current) return
       voiceCursorRef.current = next
+      if (next >= index.tokens.length) {
+        setEnded(true)
+        setControlsVisible(true)
+      }
       const wordIndex = index.tokenToWord[next - 1]
       if (wordIndex === undefined) return
       setSpokenBoundary(wordIndex)
@@ -370,7 +374,7 @@ function Prompter({ script }: { script: Script }) {
     onUtterance: handleUtterance,
     onPermissionDenied: useCallback(() => {
       setVoice(false)
-      showNotice(t('prompter.micDenied'))
+      showNotice(t('prompter.micDenied'), () => setVoice(true))
     }, [showNotice]),
     onUnavailable: useCallback(() => {
       setVoice(false)
@@ -405,8 +409,14 @@ function Prompter({ script }: { script: Script }) {
         }
         posRef.current = Math.min(max, Math.max(0, posRef.current))
         content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+        if (playingRef.current) elapsedRef.current += dt
+        const progress = max > 0 ? posRef.current / max : 0
+        if (ts - lastTimeWriteRef.current > 250) {
+          lastTimeWriteRef.current = ts
+          setElapsed(elapsedRef.current)
+          setProgressPct(progress)
+        }
         if (progressRef.current) {
-          const progress = max > 0 ? posRef.current / max : 0
           progressRef.current.style.transform = `scaleX(${progress})`
         }
         if (
@@ -417,6 +427,7 @@ function Prompter({ script }: { script: Script }) {
         ) {
           setPlaying(false)
           setControlsVisible(true)
+          setEnded(true)
         }
       }
       raf = requestAnimationFrame(tick)
@@ -440,6 +451,36 @@ function Prompter({ script }: { script: Script }) {
     scheduleHide()
   }, [scheduleHide])
 
+  const applyVoiceCursor = useCallback(
+    (next: number) => {
+      const index = scriptIndexRef.current
+      voiceCursorRef.current = next
+      const wordIndex = index.tokenToWord[next - 1]
+      setSpokenBoundary(wordIndex ?? -1)
+      const stage = stageRef.current
+      const content = contentRef.current
+      const span =
+        wordIndex !== undefined
+          ? content?.querySelector<HTMLElement>(`[data-wi="${wordIndex}"]`)
+          : null
+      if (!stage || !content || !span) return
+      const offset =
+        span.getBoundingClientRect().top - content.getBoundingClientRect().top
+      voiceTargetRef.current = offset - stage.clientHeight * voiceAnchor()
+    },
+    [voiceAnchor, setSpokenBoundary],
+  )
+
+  const nudgeVoice = useCallback(
+    (delta: number) => {
+      if (!voiceActiveRef.current) return
+      const length = scriptIndexRef.current.tokens.length
+      applyVoiceCursor(nudgeCursor(voiceCursorRef.current, delta, length))
+      showControls()
+    },
+    [applyVoiceCursor, showControls],
+  )
+
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
@@ -459,6 +500,7 @@ function Prompter({ script }: { script: Script }) {
   /* Play goes through the countdown when configured; a tap during the
      countdown cancels and returns to the paused state */
   const startPlayback = useCallback(() => {
+    setEnded(false)
     setSettingsOpen(false)
     if (countdownRef.current > 0) {
       setCountdownLeft(countdownRef.current)
@@ -502,8 +544,27 @@ function Prompter({ script }: { script: Script }) {
     voiceCursorRef.current = 0
     voiceTargetRef.current = null
     setSpokenBoundary(-1)
+    elapsedRef.current = 0
+    setElapsed(0)
+    setProgressPct(0)
+    setEnded(false)
     showControls()
   }, [showControls, setSpokenBoundary])
+
+  const scrubTo = useCallback(
+    (clientX: number, el: HTMLElement) => {
+      const stage = stageRef.current
+      const content = contentRef.current
+      if (!stage || !content) return
+      const max = Math.max(0, content.scrollHeight - stage.clientHeight)
+      const rect = el.getBoundingClientRect()
+      const ratio = (clientX - rect.left) / rect.width
+      posRef.current = scrubRatioToPos(ratio, max)
+      content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+      if (voiceActiveRef.current) syncVoiceCursor()
+    },
+    [syncVoiceCursor],
+  )
 
   const changeSpeed = useCallback(
     (delta: number) => {
@@ -693,6 +754,12 @@ function Prompter({ script }: { script: Script }) {
         case 'F':
           toggleFullscreen()
           break
+        case ',':
+          nudgeVoice(-1)
+          break
+        case '.':
+          nudgeVoice(1)
+          break
         case 'Escape':
           /* With fullscreen active Esc exits fullscreen; without it, exits the prompter */
           if (!document.fullscreenElement) exit()
@@ -711,9 +778,25 @@ function Prompter({ script }: { script: Script }) {
     toggleFullscreen,
     exit,
     showControls,
+    nudgeVoice,
   ])
 
   const cameraVisible = camera && cameraReady
+
+  const totalSeconds =
+    speed > 0
+      ? Math.round(
+          (contentRef.current && stageRef.current
+            ? Math.max(
+                0,
+                contentRef.current.scrollHeight - stageRef.current.clientHeight,
+              )
+            : 0) / speed,
+        )
+      : 0
+  const timeText = voiceListening
+    ? `${formatClock(elapsed)} · ${Math.round(progressPct * 100)}%`
+    : `${formatClock(elapsed)} / ${formatClock(totalSeconds)}`
 
   return (
     /* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard control happens via global shortcuts */
@@ -740,13 +823,48 @@ function Prompter({ script }: { script: Script }) {
         <div aria-hidden className="absolute inset-0 bg-ls-black/55" />
       )}
 
-      {/* Progress bar: hairline at the top */}
-      <div className="absolute inset-x-0 top-0 z-20 h-0.5 bg-ls-white/10">
-        <div
-          ref={progressRef}
-          className="h-full w-full origin-left bg-ls-blue"
-          style={{ transform: 'scaleX(0)' }}
-        />
+      {/* Progress bar: hairline at the top; scrubbable while paused */}
+      <div
+        className={`absolute inset-x-0 top-0 z-20 h-3 ${playing ? '' : 'cursor-pointer'}`}
+        role="slider"
+        tabIndex={0}
+        aria-label={t('prompter.scrub')}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progressPct * 100)}
+        onPointerDown={(e) => {
+          if (playing) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          scrubTo(e.clientX, e.currentTarget)
+        }}
+        onPointerMove={(e) => {
+          if (playing || e.buttons === 0) return
+          scrubTo(e.clientX, e.currentTarget)
+        }}
+        onKeyDown={(e) => {
+          if (playing) return
+          const stage = stageRef.current
+          const content = contentRef.current
+          if (!stage || !content) return
+          const max = Math.max(0, content.scrollHeight - stage.clientHeight)
+          if (e.key === 'ArrowRight') {
+            posRef.current = Math.min(max, posRef.current + max * 0.02)
+            content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+          }
+          if (e.key === 'ArrowLeft') {
+            posRef.current = Math.max(0, posRef.current - max * 0.02)
+            content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+          }
+          if (voiceActiveRef.current) syncVoiceCursor()
+        }}
+      >
+        <div className="relative top-0 h-0.5 bg-ls-white/10">
+          <div
+            ref={progressRef}
+            className="h-full w-full origin-left bg-ls-blue"
+            style={{ transform: 'scaleX(0)' }}
+          />
+        </div>
       </div>
 
       {/* Mirroring for physical teleprompter rigs: applied to the whole stage */}
@@ -758,8 +876,12 @@ function Prompter({ script }: { script: Script }) {
       >
         <div ref={contentRef} className="will-change-transform">
           <div
-            className="mx-auto max-w-[900px] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white"
+            className={`mx-auto text-center font-normal text-ls-white ${fontFamily === 'serif' ? 'reader-serif' : ''}`}
             style={{
+              maxWidth: `${columnWidth}px`,
+              lineHeight,
+              paddingTop: '55vh',
+              paddingBottom: '55vh',
               fontSize: `${fontSize}px`,
               paddingLeft: `${margin}vw`,
               paddingRight: `${margin}vw`,
@@ -776,19 +898,33 @@ function Prompter({ script }: { script: Script }) {
                   />
                 )}
                 <p className="whitespace-pre-wrap">
-                  {section.chunks.map((chunk, chunkIndex) =>
-                    chunk.wordIndex === null ? (
-                      chunk.text
-                    ) : (
+                  {section.chunks.map((chunk, chunkIndex) => {
+                    if (chunk.marker) {
+                      return (
+                        <span
+                          // biome-ignore lint/suspicious/noArrayIndexKey: chunks derive from the text and only change together
+                          key={chunkIndex}
+                          aria-hidden
+                          className="marker"
+                        >
+                          {chunk.marker === 'pause'
+                            ? t('prompter.markerPause')
+                            : t('prompter.markerBreath')}
+                        </span>
+                      )
+                    }
+                    if (chunk.wordIndex === null) return chunk.text
+                    return (
                       <span
                         // biome-ignore lint/suspicious/noArrayIndexKey: chunks derive from the text and only change together
                         key={chunkIndex}
                         data-wi={chunk.wordIndex}
+                        className={chunk.emphasis ? 'font-medium' : undefined}
                       >
                         {chunk.text}
                       </span>
-                    ),
-                  )}
+                    )
+                  })}
                 </p>
               </div>
             ))}
@@ -817,6 +953,31 @@ function Prompter({ script }: { script: Script }) {
             </span>
           </div>
         )}
+
+        {/* End-of-script overlay */}
+        {ended && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-ls-black/80">
+            <p className="display text-2xl text-ls-white">
+              {t('prompter.endTitle')}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={restart}
+                className="rounded-btn bg-ls-blue px-4 py-2 text-sm text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed"
+              >
+                {t('prompter.restartFull')}
+              </button>
+              <button
+                type="button"
+                onClick={exit}
+                className="rounded-btn px-4 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                {t('prompter.endBack')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controls overlay: appears on touch or mouse, hides after 3s of scrolling */}
@@ -830,11 +991,33 @@ function Prompter({ script }: { script: Script }) {
         aria-label={t('prompter.controls')}
         tabIndex={-1}
       >
+        {/* Playback time readout */}
+        <p
+          role="timer"
+          className="mx-auto mb-2 w-fit rounded-card bg-ls-gray-900/95 px-3 py-1 text-xs tabular-nums text-ls-gray-500"
+          aria-label={t('prompter.timeLabel')}
+        >
+          {timeText}
+        </p>
+
         {/* Transient notices: mic or camera permission problems */}
         {notice && (
-          <p className="mx-auto mb-2 w-fit max-w-[calc(100vw-2rem)] rounded-card bg-ls-gray-900/95 px-4 py-2 text-sm text-ls-white">
-            {notice}
-          </p>
+          <div className="mx-auto mb-2 flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-card bg-ls-gray-900/95 px-4 py-2">
+            <p className="text-sm text-ls-white">{notice.message}</p>
+            {notice.retry && (
+              <button
+                type="button"
+                onClick={() => {
+                  const r = notice.retry
+                  setNotice(null)
+                  r?.()
+                }}
+                className="rounded-btn px-2 py-1 text-sm text-ls-blue transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                {t('prompter.tryAgain')}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Settings panel: presets, countdown, eye line, margins, voice language */}
@@ -970,6 +1153,78 @@ function Prompter({ script }: { script: Script }) {
                   <span className="w-14 text-right text-xs tabular-nums text-ls-gray-500">
                     {margin}%
                   </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="leading-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.lineHeight')}
+                </label>
+                <input
+                  id="leading-range"
+                  type="range"
+                  min={LINE_HEIGHT_MIN}
+                  max={LINE_HEIGHT_MAX}
+                  step={0.05}
+                  value={lineHeight}
+                  onChange={(e) => {
+                    setLineHeight(clampLineHeight(Number(e.target.value)))
+                    showControls()
+                  }}
+                  className="h-1 w-28 cursor-pointer accent-[var(--ls-blue)]"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="width-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.columnWidth')}
+                </label>
+                <input
+                  id="width-range"
+                  type="range"
+                  min={COLUMN_WIDTH_MIN}
+                  max={COLUMN_WIDTH_MAX}
+                  step={20}
+                  value={columnWidth}
+                  onChange={(e) => {
+                    setColumnWidth(clampColumnWidth(Number(e.target.value)))
+                    showControls()
+                  }}
+                  className="h-1 w-28 cursor-pointer accent-[var(--ls-blue)]"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-ls-gray-500">
+                  {t('settings.fontFamily')}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontFamily('sans')
+                      showControls()
+                    }}
+                    aria-pressed={fontFamily === 'sans'}
+                    className={`rounded-btn px-2.5 py-1 text-xs transition-colors duration-[140ms] ${fontFamily === 'sans' ? 'bg-ls-blue text-ls-white' : 'text-ls-gray-500 hover:text-ls-white'}`}
+                  >
+                    {t('settings.fontSans')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontFamily('serif')
+                      showControls()
+                    }}
+                    aria-pressed={fontFamily === 'serif'}
+                    className={`rounded-btn px-2.5 py-1 text-xs transition-colors duration-[140ms] ${fontFamily === 'serif' ? 'bg-ls-blue text-ls-white' : 'text-ls-gray-500 hover:text-ls-white'}`}
+                  >
+                    {t('settings.fontSerif')}
+                  </button>
                 </div>
               </div>
 
@@ -1121,6 +1376,29 @@ function Prompter({ script }: { script: Script }) {
                 className={voiceListening ? 'voice-live' : undefined}
               />
             </button>
+          )}
+
+          {voiceListening && (
+            <>
+              <button
+                type="button"
+                onClick={() => nudgeVoice(-1)}
+                aria-label={t('prompter.nudgeBack')}
+                title={`${t('prompter.nudgeBack')} (,)`}
+                className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                <span className="text-sm leading-none">‹</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => nudgeVoice(1)}
+                aria-label={t('prompter.nudgeForward')}
+                title={`${t('prompter.nudgeForward')} (.)`}
+                className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                <span className="text-sm leading-none">›</span>
+              </button>
+            </>
           )}
 
           <button

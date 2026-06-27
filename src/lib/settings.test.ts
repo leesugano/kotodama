@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  clampColumnWidth,
   clampCountdown,
   clampEyeLinePosition,
   clampFontSize,
+  clampLineHeight,
   clampMargin,
   clampSpeed,
+  clampWpm,
   DEFAULT_SETTINGS,
   loadSettings,
   SPEED_PRESETS,
@@ -51,6 +54,23 @@ describe('loadSettings', () => {
     expect(DEFAULT_SETTINGS.voice).toBe(false)
     expect(DEFAULT_SETTINGS.camera).toBe(false)
     expect(DEFAULT_SETTINGS.speechLang).toBe('')
+  })
+})
+
+describe('typography settings', () => {
+  it('has the new defaults', () => {
+    expect(DEFAULT_SETTINGS.lineHeight).toBe(1.45)
+    expect(DEFAULT_SETTINGS.columnWidth).toBe(900)
+    expect(DEFAULT_SETTINGS.fontFamily).toBe('sans')
+    expect(DEFAULT_SETTINGS.wpm).toBe(140)
+  })
+  it('clamps out-of-range values', () => {
+    expect(clampLineHeight(5)).toBe(2)
+    expect(clampLineHeight(0.5)).toBe(1.2)
+    expect(clampColumnWidth(99999)).toBe(1100)
+    expect(clampColumnWidth(10)).toBe(600)
+    expect(clampWpm(9999)).toBe(260)
+    expect(clampWpm(1)).toBe(80)
   })
 })
 
