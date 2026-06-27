@@ -56,6 +56,7 @@ import { formatClock, layoutScript } from '../lib/text'
 import {
   alignCursor,
   buildScriptIndex,
+  nudgeCursor,
   resolveSpeechLang,
   SPEECH_LANGUAGES,
 } from '../lib/voice'
@@ -450,6 +451,36 @@ function Prompter({ script }: { script: Script }) {
     scheduleHide()
   }, [scheduleHide])
 
+  const applyVoiceCursor = useCallback(
+    (next: number) => {
+      const index = scriptIndexRef.current
+      voiceCursorRef.current = next
+      const wordIndex = index.tokenToWord[next - 1]
+      setSpokenBoundary(wordIndex ?? -1)
+      const stage = stageRef.current
+      const content = contentRef.current
+      const span =
+        wordIndex !== undefined
+          ? content?.querySelector<HTMLElement>(`[data-wi="${wordIndex}"]`)
+          : null
+      if (!stage || !content || !span) return
+      const offset =
+        span.getBoundingClientRect().top - content.getBoundingClientRect().top
+      voiceTargetRef.current = offset - stage.clientHeight * voiceAnchor()
+    },
+    [voiceAnchor, setSpokenBoundary],
+  )
+
+  const nudgeVoice = useCallback(
+    (delta: number) => {
+      if (!voiceActiveRef.current) return
+      const length = scriptIndexRef.current.tokens.length
+      applyVoiceCursor(nudgeCursor(voiceCursorRef.current, delta, length))
+      showControls()
+    },
+    [applyVoiceCursor, showControls],
+  )
+
   useEffect(() => {
     return () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
@@ -723,6 +754,12 @@ function Prompter({ script }: { script: Script }) {
         case 'F':
           toggleFullscreen()
           break
+        case ',':
+          nudgeVoice(-1)
+          break
+        case '.':
+          nudgeVoice(1)
+          break
         case 'Escape':
           /* With fullscreen active Esc exits fullscreen; without it, exits the prompter */
           if (!document.fullscreenElement) exit()
@@ -741,6 +778,7 @@ function Prompter({ script }: { script: Script }) {
     toggleFullscreen,
     exit,
     showControls,
+    nudgeVoice,
   ])
 
   const cameraVisible = camera && cameraReady
@@ -1337,6 +1375,29 @@ function Prompter({ script }: { script: Script }) {
                 className={voiceListening ? 'voice-live' : undefined}
               />
             </button>
+          )}
+
+          {voiceListening && (
+            <>
+              <button
+                type="button"
+                onClick={() => nudgeVoice(-1)}
+                aria-label={t('prompter.nudgeBack')}
+                title={`${t('prompter.nudgeBack')} (,)`}
+                className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                <span className="text-sm leading-none">‹</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => nudgeVoice(1)}
+                aria-label={t('prompter.nudgeForward')}
+                title={`${t('prompter.nudgeForward')} (.)`}
+                className="rounded-btn p-2.5 text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                <span className="text-sm leading-none">›</span>
+              </button>
+            </>
           )}
 
           <button
