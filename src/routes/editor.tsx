@@ -129,6 +129,7 @@ function EditorPage() {
   const handleChange = useCallback(
     (text: string) => {
       setContent(text)
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current)
       setSaveStatus('saving')
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
       saveTimerRef.current = setTimeout(() => {
