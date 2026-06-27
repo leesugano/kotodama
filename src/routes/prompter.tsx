@@ -182,7 +182,10 @@ function Prompter({ script }: { script: Script }) {
   const [controlsVisible, setControlsVisible] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{
+    message: string
+    retry?: () => void
+  } | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [progressPct, setProgressPct] = useState(0)
   const [ended, setEnded] = useState(false)
@@ -247,14 +250,16 @@ function Prompter({ script }: { script: Script }) {
     spokenWordRef.current = -1
   }, [sections])
 
-  const showNotice = useCallback((message: string) => {
-    setNotice(message)
+  const showNotice = useCallback((message: string, retry?: () => void) => {
+    setNotice({ message, retry })
     setControlsVisible(true)
     if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current)
-    noticeTimerRef.current = setTimeout(
-      () => setNotice(null),
-      NOTICE_HIDE_DELAY,
-    )
+    if (!retry) {
+      noticeTimerRef.current = setTimeout(
+        () => setNotice(null),
+        NOTICE_HIDE_DELAY,
+      )
+    }
   }, [])
 
   /* Camera self-view: stream lives behind the text with a dark scrim */
@@ -267,7 +272,7 @@ function Prompter({ script }: { script: Script }) {
   useEffect(() => {
     if (camera && cameraDenied) {
       setCamera(false)
-      showNotice(t('prompter.cameraDenied'))
+      showNotice(t('prompter.cameraDenied'), () => setCamera(true))
     }
   }, [camera, cameraDenied, showNotice])
 
@@ -380,7 +385,7 @@ function Prompter({ script }: { script: Script }) {
     onUtterance: handleUtterance,
     onPermissionDenied: useCallback(() => {
       setVoice(false)
-      showNotice(t('prompter.micDenied'))
+      showNotice(t('prompter.micDenied'), () => setVoice(true))
     }, [showNotice]),
     onUnavailable: useCallback(() => {
       setVoice(false)
@@ -903,9 +908,22 @@ function Prompter({ script }: { script: Script }) {
 
         {/* Transient notices: mic or camera permission problems */}
         {notice && (
-          <p className="mx-auto mb-2 w-fit max-w-[calc(100vw-2rem)] rounded-card bg-ls-gray-900/95 px-4 py-2 text-sm text-ls-white">
-            {notice}
-          </p>
+          <div className="mx-auto mb-2 flex w-fit max-w-[calc(100vw-2rem)] items-center gap-3 rounded-card bg-ls-gray-900/95 px-4 py-2">
+            <p className="text-sm text-ls-white">{notice.message}</p>
+            {notice.retry && (
+              <button
+                type="button"
+                onClick={() => {
+                  const r = notice.retry
+                  setNotice(null)
+                  r?.()
+                }}
+                className="rounded-btn px-2 py-1 text-sm text-ls-blue transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                {t('prompter.tryAgain')}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Settings panel: presets, countdown, eye line, margins, voice language */}
