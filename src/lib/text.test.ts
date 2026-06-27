@@ -7,6 +7,7 @@ import {
   formatClock,
   formatDuration,
   formatModifiedDate,
+  parseMarkers,
 } from './text'
 
 describe('cleanText', () => {
@@ -87,5 +88,27 @@ describe('formatClock', () => {
   it('clamps invalid input to 0:00', () => {
     expect(formatClock(-5)).toBe('0:00')
     expect(formatClock(Number.NaN)).toBe('0:00')
+  })
+})
+
+describe('parseMarkers', () => {
+  it('splits pause and breath into markers', () => {
+    expect(parseMarkers('hello [pause] world')).toEqual([
+      { kind: 'text', text: 'hello ' },
+      { kind: 'pause' },
+      { kind: 'text', text: ' world' },
+    ])
+    expect(parseMarkers('[BREATH]')).toEqual([{ kind: 'breath' }])
+  })
+  it('parses emphasis', () => {
+    expect(parseMarkers('a **big** day')).toEqual([
+      { kind: 'text', text: 'a ' },
+      { kind: 'emphasis', text: 'big' },
+      { kind: 'text', text: ' day' },
+    ])
+  })
+  it('treats a lone ** and unknown brackets as literal text', () => {
+    expect(parseMarkers('a ** b')).toEqual([{ kind: 'text', text: 'a ** b' }])
+    expect(parseMarkers('[foo]')).toEqual([{ kind: 'text', text: '[foo]' }])
   })
 })

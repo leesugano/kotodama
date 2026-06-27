@@ -2,6 +2,12 @@ import { getLocale, t } from './i18n'
 
 export const DEFAULT_WPM = 140
 
+export type Segment =
+  | { kind: 'text'; text: string }
+  | { kind: 'emphasis'; text: string }
+  | { kind: 'pause' }
+  | { kind: 'breath' }
+
 /** Normalizes pasted/imported text: nbsp, line endings, trailing spaces, blank runs. */
 export function cleanText(raw: string): string {
   return raw
@@ -72,4 +78,26 @@ export function deriveTitle(content: string): string {
     .find((line) => line.length > 0)
   if (!firstLine) return t('editor.untitled')
   return firstLine.length > 80 ? `${firstLine.slice(0, 80)}...` : firstLine
+}
+
+const MARKER_RE = /\[(pause|breath)\]|\*\*([^*]+?)\*\*/gi
+
+export function parseMarkers(text: string): Segment[] {
+  const segments: Segment[] = []
+  let last = 0
+  for (const m of text.matchAll(MARKER_RE)) {
+    const i = m.index ?? 0
+    if (i > last) segments.push({ kind: 'text', text: text.slice(last, i) })
+    if (m[1]) {
+      segments.push({
+        kind: m[1].toLowerCase() === 'pause' ? 'pause' : 'breath',
+      })
+    } else if (m[2]) {
+      segments.push({ kind: 'emphasis', text: m[2] })
+    }
+    last = i + m[0].length
+  }
+  if (last < text.length)
+    segments.push({ kind: 'text', text: text.slice(last) })
+  return segments
 }
