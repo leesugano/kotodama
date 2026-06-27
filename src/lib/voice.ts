@@ -262,3 +262,12 @@ export function resolveSpeechLang(stored: string): string {
     typeof navigator !== 'undefined' ? (navigator.language ?? '') : ''
   return matchSpeechLang(browserTag) ?? 'en-US'
 }
+
+/** Moves the voice cursor by delta words, clamped to the token range. */
+export function nudgeCursor(
+  cursor: number,
+  delta: number,
+  length: number,
+): number {
+  return Math.max(0, Math.min(length, cursor + delta))
+}
