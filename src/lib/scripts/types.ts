@@ -16,5 +16,6 @@ export interface ScriptRepository {
   get(id: string): Promise<Script | null>
   list(): Promise<Script[]>
   save(script: Script): Promise<void>
+  saveMany(scripts: Script[]): Promise<void>
   remove(id: string): Promise<void>
 }

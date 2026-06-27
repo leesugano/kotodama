@@ -56,6 +56,18 @@ export class IndexedDBScriptRepository implements ScriptRepository {
     await requestToPromise(store.put(script))
   }
 
+  async saveMany(scripts: Script[]): Promise<void> {
+    if (scripts.length === 0) return
+    const db = await this.db()
+    const tx = db.transaction(STORE, 'readwrite')
+    const store = tx.objectStore(STORE)
+    await Promise.all(scripts.map((s) => requestToPromise(store.put(s))))
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  }
+
   async remove(id: string): Promise<void> {
     const db = await this.db()
     const store = db.transaction(STORE, 'readwrite').objectStore(STORE)
