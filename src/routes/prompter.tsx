@@ -45,6 +45,7 @@ import {
   SPEED_STEP,
   saveSettings,
 } from '../lib/settings'
+import { formatClock } from '../lib/text'
 import {
   alignCursor,
   buildScriptIndex,
@@ -160,6 +161,8 @@ function Prompter({ script }: { script: Script }) {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const elapsedRef = useRef(0)
+  const lastTimeWriteRef = useRef(0)
 
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState(initialSettings.speed)
@@ -180,6 +183,8 @@ function Prompter({ script }: { script: Script }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const [progressPct, setProgressPct] = useState(0)
 
   const voiceSupported = useMemo(isSpeechRecognitionSupported, [])
 
@@ -405,8 +410,14 @@ function Prompter({ script }: { script: Script }) {
         }
         posRef.current = Math.min(max, Math.max(0, posRef.current))
         content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+        if (playingRef.current) elapsedRef.current += dt
+        const progress = max > 0 ? posRef.current / max : 0
+        if (ts - lastTimeWriteRef.current > 250) {
+          lastTimeWriteRef.current = ts
+          setElapsed(elapsedRef.current)
+          setProgressPct(progress)
+        }
         if (progressRef.current) {
-          const progress = max > 0 ? posRef.current / max : 0
           progressRef.current.style.transform = `scaleX(${progress})`
         }
         if (
@@ -502,6 +513,9 @@ function Prompter({ script }: { script: Script }) {
     voiceCursorRef.current = 0
     voiceTargetRef.current = null
     setSpokenBoundary(-1)
+    elapsedRef.current = 0
+    setElapsed(0)
+    setProgressPct(0)
     showControls()
   }, [showControls, setSpokenBoundary])
 
@@ -715,6 +729,21 @@ function Prompter({ script }: { script: Script }) {
 
   const cameraVisible = camera && cameraReady
 
+  const totalSeconds =
+    speed > 0
+      ? Math.round(
+          (contentRef.current && stageRef.current
+            ? Math.max(
+                0,
+                contentRef.current.scrollHeight - stageRef.current.clientHeight,
+              )
+            : 0) / speed,
+        )
+      : 0
+  const timeText = voiceListening
+    ? `${formatClock(elapsed)} · ${Math.round(progressPct * 100)}%`
+    : `${formatClock(elapsed)} / ${formatClock(totalSeconds)}`
+
   return (
     /* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard control happens via global shortcuts */
     /* biome-ignore lint/a11y/noStaticElementInteractions: tap anywhere is the P0 play/pause gesture */
@@ -830,6 +859,15 @@ function Prompter({ script }: { script: Script }) {
         aria-label={t('prompter.controls')}
         tabIndex={-1}
       >
+        {/* Playback time readout */}
+        <p
+          role="timer"
+          className="mx-auto mb-2 w-fit rounded-card bg-ls-gray-900/95 px-3 py-1 text-xs tabular-nums text-ls-gray-500"
+          aria-label={t('prompter.timeLabel')}
+        >
+          {timeText}
+        </p>
+
         {/* Transient notices: mic or camera permission problems */}
         {notice && (
           <p className="mx-auto mb-2 w-fit max-w-[calc(100vw-2rem)] rounded-card bg-ls-gray-900/95 px-4 py-2 text-sm text-ls-white">
