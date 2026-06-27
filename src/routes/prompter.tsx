@@ -185,6 +185,7 @@ function Prompter({ script }: { script: Script }) {
   const [notice, setNotice] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
   const [progressPct, setProgressPct] = useState(0)
+  const [ended, setEnded] = useState(false)
 
   const voiceSupported = useMemo(isSpeechRecognitionSupported, [])
 
@@ -341,6 +342,10 @@ function Prompter({ script }: { script: Script }) {
       const next = alignCursor(index.tokens, voiceCursorRef.current, tokens)
       if (next === voiceCursorRef.current) return
       voiceCursorRef.current = next
+      if (next >= index.tokens.length) {
+        setEnded(true)
+        setControlsVisible(true)
+      }
       const wordIndex = index.tokenToWord[next - 1]
       if (wordIndex === undefined) return
       setSpokenBoundary(wordIndex)
@@ -428,6 +433,7 @@ function Prompter({ script }: { script: Script }) {
         ) {
           setPlaying(false)
           setControlsVisible(true)
+          setEnded(true)
         }
       }
       raf = requestAnimationFrame(tick)
@@ -470,6 +476,7 @@ function Prompter({ script }: { script: Script }) {
   /* Play goes through the countdown when configured; a tap during the
      countdown cancels and returns to the paused state */
   const startPlayback = useCallback(() => {
+    setEnded(false)
     setSettingsOpen(false)
     if (countdownRef.current > 0) {
       setCountdownLeft(countdownRef.current)
@@ -516,6 +523,7 @@ function Prompter({ script }: { script: Script }) {
     elapsedRef.current = 0
     setElapsed(0)
     setProgressPct(0)
+    setEnded(false)
     showControls()
   }, [showControls, setSpokenBoundary])
 
@@ -844,6 +852,31 @@ function Prompter({ script }: { script: Script }) {
             >
               {countdownLeft}
             </span>
+          </div>
+        )}
+
+        {/* End-of-script overlay */}
+        {ended && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-ls-black/80">
+            <p className="display text-2xl text-ls-white">
+              {t('prompter.endTitle')}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={restart}
+                className="rounded-btn bg-ls-blue px-4 py-2 text-sm text-ls-white transition-colors duration-[140ms] hover:bg-ls-blue-pressed"
+              >
+                {t('prompter.restartFull')}
+              </button>
+              <button
+                type="button"
+                onClick={exit}
+                className="rounded-btn px-4 py-2 text-sm text-ls-gray-500 transition-colors duration-[140ms] hover:text-ls-white"
+              >
+                {t('prompter.endBack')}
+              </button>
+            </div>
           </div>
         )}
       </div>
