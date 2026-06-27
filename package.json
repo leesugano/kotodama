@@ -28,6 +28,7 @@
     "better-auth": "^1.6.16",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^0.545.0",
+    "mammoth": "^1.12.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "tailwindcss": "^4.1.18"
