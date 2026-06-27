@@ -26,16 +26,22 @@ import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
 import {
+  COLUMN_WIDTH_MAX,
+  COLUMN_WIDTH_MIN,
   COUNTDOWN_MAX,
   COUNTDOWN_MIN,
+  clampColumnWidth,
   clampCountdown,
   clampEyeLinePosition,
   clampFontSize,
+  clampLineHeight,
   clampMargin,
   clampSpeed,
   EYELINE_MAX,
   EYELINE_MIN,
   FONT_STEP,
+  LINE_HEIGHT_MAX,
+  LINE_HEIGHT_MIN,
   loadSettings,
   MARGIN_MAX,
   MARGIN_MIN,
@@ -148,6 +154,9 @@ function Prompter({ script }: { script: Script }) {
   const [camera, setCamera] = useState(initialSettings.camera)
   const [voice, setVoice] = useState(initialSettings.voice)
   const [voiceLang, setVoiceLang] = useState(initialSettings.speechLang)
+  const [lineHeight, setLineHeight] = useState(initialSettings.lineHeight)
+  const [columnWidth, setColumnWidth] = useState(initialSettings.columnWidth)
+  const [fontFamily, setFontFamily] = useState(initialSettings.fontFamily)
   const [countdownLeft, setCountdownLeft] = useState<number | null>(null)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -168,6 +177,7 @@ function Prompter({ script }: { script: Script }) {
 
   useWakeLock()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: initialSettings is a stable useRef().current; wpm is read-once and never changes
   useEffect(() => {
     saveSettings({
       speed,
@@ -181,6 +191,10 @@ function Prompter({ script }: { script: Script }) {
       camera,
       voice,
       speechLang: voiceLang,
+      lineHeight,
+      columnWidth,
+      fontFamily,
+      wpm: initialSettings.wpm,
     })
   }, [
     speed,
@@ -194,6 +208,9 @@ function Prompter({ script }: { script: Script }) {
     camera,
     voice,
     voiceLang,
+    lineHeight,
+    columnWidth,
+    fontFamily,
   ])
 
   /* Sections: `---` lines become visual separators instead of text. Words
@@ -770,8 +787,12 @@ function Prompter({ script }: { script: Script }) {
       >
         <div ref={contentRef} className="will-change-transform">
           <div
-            className="mx-auto max-w-[900px] pt-[55vh] pb-[55vh] text-center font-normal leading-[1.45] text-ls-white"
+            className={`mx-auto text-center font-normal text-ls-white ${fontFamily === 'serif' ? 'reader-serif' : ''}`}
             style={{
+              maxWidth: `${columnWidth}px`,
+              lineHeight,
+              paddingTop: '55vh',
+              paddingBottom: '55vh',
               fontSize: `${fontSize}px`,
               paddingLeft: `${margin}vw`,
               paddingRight: `${margin}vw`,
@@ -1043,6 +1064,78 @@ function Prompter({ script }: { script: Script }) {
                   <span className="w-14 text-right text-xs tabular-nums text-ls-gray-500">
                     {margin}%
                   </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="leading-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.lineHeight')}
+                </label>
+                <input
+                  id="leading-range"
+                  type="range"
+                  min={LINE_HEIGHT_MIN}
+                  max={LINE_HEIGHT_MAX}
+                  step={0.05}
+                  value={lineHeight}
+                  onChange={(e) => {
+                    setLineHeight(clampLineHeight(Number(e.target.value)))
+                    showControls()
+                  }}
+                  className="h-1 w-28 cursor-pointer accent-[var(--ls-blue)]"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="width-range"
+                  className="text-xs text-ls-gray-500"
+                >
+                  {t('settings.columnWidth')}
+                </label>
+                <input
+                  id="width-range"
+                  type="range"
+                  min={COLUMN_WIDTH_MIN}
+                  max={COLUMN_WIDTH_MAX}
+                  step={20}
+                  value={columnWidth}
+                  onChange={(e) => {
+                    setColumnWidth(clampColumnWidth(Number(e.target.value)))
+                    showControls()
+                  }}
+                  className="h-1 w-28 cursor-pointer accent-[var(--ls-blue)]"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-ls-gray-500">
+                  {t('settings.fontFamily')}
+                </span>
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontFamily('sans')
+                      showControls()
+                    }}
+                    aria-pressed={fontFamily === 'sans'}
+                    className={`rounded-btn px-2.5 py-1 text-xs transition-colors duration-[140ms] ${fontFamily === 'sans' ? 'bg-ls-blue text-ls-white' : 'text-ls-gray-500 hover:text-ls-white'}`}
+                  >
+                    {t('settings.fontSans')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFontFamily('serif')
+                      showControls()
+                    }}
+                    aria-pressed={fontFamily === 'serif'}
+                    className={`rounded-btn px-2.5 py-1 text-xs transition-colors duration-[140ms] ${fontFamily === 'serif' ? 'bg-ls-blue text-ls-white' : 'text-ls-gray-500 hover:text-ls-white'}`}
+                  >
+                    {t('settings.fontSerif')}
+                  </button>
                 </div>
               </div>
 

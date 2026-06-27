@@ -210,6 +210,10 @@ body {
   animation: demo-scroll 22s linear infinite;
 }
 
+.reader-serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
