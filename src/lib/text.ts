@@ -24,6 +24,16 @@ export function formatDuration(totalSeconds: number): string {
   return `${minutes}min ${seconds.toString().padStart(2, '0')}s`
 }
 
+/** Playback clock as m:ss (minutes uncapped). Invalid input becomes 0:00. */
+export function formatClock(totalSeconds: number): string {
+  const safe = Number.isFinite(totalSeconds)
+    ? Math.max(0, Math.floor(totalSeconds))
+    : 0
+  const minutes = Math.floor(safe / 60)
+  const seconds = safe % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 /** Friendly modification date for the script list. */
 export function formatModifiedDate(
   timestamp: number,

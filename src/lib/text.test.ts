@@ -3,6 +3,7 @@ import {
   countWords,
   deriveTitle,
   estimateSeconds,
+  formatClock,
   formatDuration,
   formatModifiedDate,
 } from './text'
@@ -62,5 +63,19 @@ describe('formatModifiedDate', () => {
     expect(formatModifiedDate(now - 3 * 3_600_000, now)).toBe('3h ago')
     expect(formatModifiedDate(now - 24 * 3_600_000, now)).toBe('yesterday')
     expect(formatModifiedDate(now - 3 * 86_400_000, now)).toBe('3 days ago')
+  })
+})
+
+describe('formatClock', () => {
+  it('formats seconds as m:ss', () => {
+    expect(formatClock(0)).toBe('0:00')
+    expect(formatClock(9)).toBe('0:09')
+    expect(formatClock(65)).toBe('1:05')
+    expect(formatClock(600)).toBe('10:00')
+    expect(formatClock(3725)).toBe('62:05')
+  })
+  it('clamps invalid input to 0:00', () => {
+    expect(formatClock(-5)).toBe('0:00')
+    expect(formatClock(Number.NaN)).toBe('0:00')
   })
 })
