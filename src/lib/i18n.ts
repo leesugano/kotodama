@@ -50,7 +50,7 @@ const en = {
   'editor.restoreConfirm': 'Restore {added} new and update {updated}?',
   'editor.restoreDone': 'Restored {n} scripts',
   'editor.markerHelp':
-    'Markers: [pause], [breath], **emphasis** — shown to you, never read aloud',
+    'Markers: [pause], [breath], **emphasis**, shown to you and never read aloud',
   'install.cta': 'Install Kotodama',
   'install.dismiss': 'Dismiss install prompt',
   'time.now': 'now',
@@ -149,7 +149,7 @@ const ptBR: Partial<Record<MessageKey, string>> = {
   'editor.restoreConfirm': 'Restaurar {added} novos e atualizar {updated}?',
   'editor.restoreDone': '{n} roteiros restaurados',
   'editor.markerHelp':
-    'Marcadores: [pause], [breath], **ênfase** — só para você, nunca são lidos',
+    'Marcadores: [pause], [breath], **ênfase**, só para você e nunca são lidos',
   'install.cta': 'Instalar o Kotodama',
   'install.dismiss': 'Dispensar convite de instalação',
   'time.now': 'agora',
@@ -245,7 +245,7 @@ const ja: Partial<Record<MessageKey, string>> = {
   'editor.restoreConfirm': '新規{added}件を復元し、{updated}件を更新しますか？',
   'editor.restoreDone': '{n}件の台本を復元しました',
   'editor.markerHelp':
-    'マーカー: [pause]、[breath]、**強調** — 表示のみ、読み上げません',
+    'マーカー: [pause]、[breath]、**強調**。表示専用で読み上げません',
   'install.cta': 'Kotodamaをインストール',
   'install.dismiss': 'インストールの案内を閉じる',
   'time.now': 'たった今',
