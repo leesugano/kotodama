@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  cleanText,
   countWords,
   deriveTitle,
   estimateSeconds,
@@ -7,6 +8,15 @@ import {
   formatDuration,
   formatModifiedDate,
 } from './text'
+
+describe('cleanText', () => {
+  it('normalizes whitespace from pasted content', () => {
+    expect(cleanText('a b')).toBe('a b')
+    expect(cleanText('a\r\nb\rc')).toBe('a\nb\nc')
+    expect(cleanText('a   \nb')).toBe('a\nb')
+    expect(cleanText('a\n\n\n\n\nb')).toBe('a\n\nb')
+  })
+})
 
 describe('countWords', () => {
   it('counts words separated by spaces and line breaks', () => {

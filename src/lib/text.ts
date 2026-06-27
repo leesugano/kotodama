@@ -2,6 +2,15 @@ import { getLocale, t } from './i18n'
 
 export const DEFAULT_WPM = 140
 
+/** Normalizes pasted/imported text: nbsp, line endings, trailing spaces, blank runs. */
+export function cleanText(raw: string): string {
+  return raw
+    .replace(/ /g, ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
 export function countWords(text: string): number {
   const trimmed = text.trim()
   if (!trimmed) return 0
