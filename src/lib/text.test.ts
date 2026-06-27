@@ -7,6 +7,7 @@ import {
   formatClock,
   formatDuration,
   formatModifiedDate,
+  layoutScript,
   parseMarkers,
 } from './text'
 
@@ -88,6 +89,25 @@ describe('formatClock', () => {
   it('clamps invalid input to 0:00', () => {
     expect(formatClock(-5)).toBe('0:00')
     expect(formatClock(Number.NaN)).toBe('0:00')
+  })
+})
+
+describe('layoutScript', () => {
+  it('indexes words and excludes markers from the word list', () => {
+    const { sections, words } = layoutScript('hello [pause] big world')
+    expect(words).toEqual(['hello', 'big', 'world'])
+    const markers = sections[0].chunks.filter((c) => c.marker)
+    expect(markers).toHaveLength(1)
+    expect(markers[0].marker).toBe('pause')
+  })
+  it('marks emphasized words', () => {
+    const { sections } = layoutScript('a **big** day')
+    const emph = sections[0].chunks.find((c) => c.emphasis)
+    expect(emph?.text).toBe('big')
+  })
+  it('splits on --- section breaks', () => {
+    const { sections } = layoutScript('one\n---\ntwo')
+    expect(sections).toHaveLength(2)
   })
 })
 

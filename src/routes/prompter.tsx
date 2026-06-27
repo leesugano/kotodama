@@ -45,7 +45,7 @@ import {
   SPEED_STEP,
   saveSettings,
 } from '../lib/settings'
-import { formatClock } from '../lib/text'
+import { formatClock, layoutScript } from '../lib/text'
 import {
   alignCursor,
   buildScriptIndex,
@@ -64,8 +64,6 @@ export const Route = createFileRoute('/prompter')({
 const CONTROLS_HIDE_DELAY = 3000
 /* Max delta per frame: avoids a jump when returning from a background tab */
 const MAX_FRAME_DELTA = 0.1
-/* A standalone line with 3+ hyphens splits the script into sections */
-const SECTION_BREAK = /^[\t ]*-{3,}[\t ]*$/m
 /* Where the spoken word should sit on screen when voice tracking scrolls */
 const VOICE_ANCHOR = 0.4
 /* How fast the scroll converges on the voice target (per second) */
@@ -117,34 +115,6 @@ function PrompterPage() {
   }
 
   return <Prompter script={script} />
-}
-
-/* A section rendered as alternating word and whitespace chunks; words carry
-   a global index so voice tracking can map a match back to a DOM node */
-interface SectionChunks {
-  chunks: Array<{ text: string; wordIndex: number | null }>
-}
-
-function splitSections(content: string): {
-  sections: SectionChunks[]
-  words: string[]
-} {
-  const words: string[] = []
-  const sections = content
-    .split(SECTION_BREAK)
-    .map((part) => part.replace(/^\n+|\n+$/g, ''))
-    .filter((part) => part.length > 0)
-    .map((part) => {
-      const chunks = part.split(/(\s+)/).map((text) => {
-        if (!text || /^\s+$/.test(text)) {
-          return { text, wordIndex: null }
-        }
-        words.push(text)
-        return { text, wordIndex: words.length - 1 }
-      })
-      return { chunks }
-    })
-  return { sections, words }
 }
 
 function Prompter({ script }: { script: Script }) {
@@ -229,7 +199,7 @@ function Prompter({ script }: { script: Script }) {
   /* Sections: `---` lines become visual separators instead of text. Words
      are indexed so speech matches can be mapped back to a pixel position. */
   const { sections, words } = useMemo(
-    () => splitSections(script.content),
+    () => layoutScript(script.content),
     [script.content],
   )
   const scriptIndex = useMemo(() => buildScriptIndex(words), [words])
@@ -818,19 +788,33 @@ function Prompter({ script }: { script: Script }) {
                   />
                 )}
                 <p className="whitespace-pre-wrap">
-                  {section.chunks.map((chunk, chunkIndex) =>
-                    chunk.wordIndex === null ? (
-                      chunk.text
-                    ) : (
+                  {section.chunks.map((chunk, chunkIndex) => {
+                    if (chunk.marker) {
+                      return (
+                        <span
+                          // biome-ignore lint/suspicious/noArrayIndexKey: chunks derive from the text and only change together
+                          key={chunkIndex}
+                          aria-hidden
+                          className="marker"
+                        >
+                          {chunk.marker === 'pause'
+                            ? t('prompter.markerPause')
+                            : t('prompter.markerBreath')}
+                        </span>
+                      )
+                    }
+                    if (chunk.wordIndex === null) return chunk.text
+                    return (
                       <span
                         // biome-ignore lint/suspicious/noArrayIndexKey: chunks derive from the text and only change together
                         key={chunkIndex}
                         data-wi={chunk.wordIndex}
+                        className={chunk.emphasis ? 'font-medium' : undefined}
                       >
                         {chunk.text}
                       </span>
-                    ),
-                  )}
+                    )
+                  })}
                 </p>
               </div>
             ))}

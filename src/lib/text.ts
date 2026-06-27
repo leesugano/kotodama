@@ -80,6 +80,62 @@ export function deriveTitle(content: string): string {
   return firstLine.length > 80 ? `${firstLine.slice(0, 80)}...` : firstLine
 }
 
+export interface WordChunk {
+  text: string
+  wordIndex: number | null
+  marker?: 'pause' | 'breath'
+  emphasis?: boolean
+}
+
+export interface ScriptLayout {
+  sections: { chunks: WordChunk[] }[]
+  words: string[]
+}
+
+/* A standalone line with 3+ hyphens splits the script into sections. */
+const SECTION_BREAK = /^[\t ]*-{3,}[\t ]*$/m
+
+function pushWords(
+  chunks: WordChunk[],
+  words: string[],
+  text: string,
+  emphasis: boolean,
+): void {
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue
+    if (/^\s+$/.test(part)) {
+      chunks.push({ text: part, wordIndex: null })
+    } else {
+      words.push(part)
+      chunks.push({
+        text: part,
+        wordIndex: words.length - 1,
+        ...(emphasis ? { emphasis: true } : {}),
+      })
+    }
+  }
+}
+
+export function layoutScript(content: string): ScriptLayout {
+  const words: string[] = []
+  const sections = content
+    .split(SECTION_BREAK)
+    .map((part) => part.replace(/^\n+|\n+$/g, ''))
+    .filter((part) => part.length > 0)
+    .map((part) => {
+      const chunks: WordChunk[] = []
+      for (const seg of parseMarkers(part)) {
+        if (seg.kind === 'pause' || seg.kind === 'breath') {
+          chunks.push({ text: '', wordIndex: null, marker: seg.kind })
+        } else {
+          pushWords(chunks, words, seg.text, seg.kind === 'emphasis')
+        }
+      }
+      return { chunks }
+    })
+  return { sections, words }
+}
+
 const MARKER_RE = /\[(pause|breath)\]|\*\*([^*]+?)\*\*/gi
 
 export function parseMarkers(text: string): Segment[] {
