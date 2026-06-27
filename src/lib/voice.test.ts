@@ -41,6 +41,16 @@ describe('tokenize', () => {
   it('keeps numbers', () => {
     expect(tokenize('Take 2 begins')).toEqual(['take', '2', 'begins'])
   })
+
+  describe('tokenize ignores markers', () => {
+    it('drops standalone pause/breath markers', () => {
+      expect(tokenize('hello [pause] world')).toEqual(['hello', 'world'])
+      expect(tokenize('[BREATH]')).toEqual([])
+    })
+    it('keeps emphasized words spoken', () => {
+      expect(tokenize('a **big** day')).toEqual(['a', 'big', 'day'])
+    })
+  })
 })
 
 describe('buildScriptIndex', () => {
