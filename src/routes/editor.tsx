@@ -27,14 +27,20 @@ import {
 } from '../lib/import-export'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
-import { loadCurrentScriptId, saveCurrentScriptId } from '../lib/settings'
+import {
+  clampWpm,
+  loadCurrentScriptId,
+  loadSettings,
+  saveCurrentScriptId,
+  saveSettings,
+} from '../lib/settings'
 import {
   cleanText,
-  countWords,
   deriveTitle,
   estimateSeconds,
   formatDuration,
   formatModifiedDate,
+  layoutScript,
 } from '../lib/text'
 
 export const Route = createFileRoute('/editor')({ component: EditorPage })
@@ -56,6 +62,7 @@ function EditorPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [wpm, setWpm] = useState(140)
   const [saveStatus, setSaveStatus] = useState<
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
@@ -96,6 +103,7 @@ function EditorPage() {
         }
       }
       setLoaded(true)
+      setWpm(loadSettings().wpm)
     }
     load()
     return () => {
@@ -282,6 +290,12 @@ function EditorPage() {
     navigate({ to: '/prompter', search: { id } })
   }, [persist, navigate])
 
+  const changeWpm = useCallback((value: number) => {
+    const next = clampWpm(value)
+    setWpm(next)
+    saveSettings({ ...loadSettings(), wpm: next })
+  }, [])
+
   const handleExport = useCallback(() => {
     if (!currentIdRef.current) return
     const title = metaRef.current.customTitle
@@ -348,8 +362,8 @@ function EditorPage() {
     setRestorePrompt(null)
   }, [restorePrompt])
 
-  const words = countWords(content)
-  const duration = formatDuration(estimateSeconds(words))
+  const words = layoutScript(content).words.length
+  const duration = formatDuration(estimateSeconds(words, wpm))
   const hasText = words > 0
 
   const visibleScripts = query.trim()
@@ -643,7 +657,18 @@ function EditorPage() {
                 <>
                   {words} {words === 1 ? t('editor.word') : t('editor.words')}
                   <span className="px-2 text-line">|</span>
-                  {duration} {t('editor.wpmSuffix')}
+                  {duration}
+                  <span className="px-2 text-line">|</span>
+                  <input
+                    type="number"
+                    min={80}
+                    max={260}
+                    value={wpm}
+                    onChange={(e) => changeWpm(Number(e.target.value))}
+                    aria-label={t('editor.wpmLabel')}
+                    className="w-12 rounded-btn bg-surface-raised px-1 py-0.5 text-right text-sm tabular-nums text-secondary outline-none focus:text-primary"
+                  />
+                  {' wpm'}
                 </>
               ) : (
                 t('editor.startHint')
