@@ -25,6 +25,7 @@ import { useWakeLock } from '../hooks/useWakeLock'
 import { t } from '../lib/i18n'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
+import { scrubRatioToPos } from '../lib/scroll'
 import {
   COLUMN_WIDTH_MAX,
   COLUMN_WIDTH_MIN,
@@ -519,6 +520,21 @@ function Prompter({ script }: { script: Script }) {
     showControls()
   }, [showControls, setSpokenBoundary])
 
+  const scrubTo = useCallback(
+    (clientX: number, el: HTMLElement) => {
+      const stage = stageRef.current
+      const content = contentRef.current
+      if (!stage || !content) return
+      const max = Math.max(0, content.scrollHeight - stage.clientHeight)
+      const rect = el.getBoundingClientRect()
+      const ratio = (clientX - rect.left) / rect.width
+      posRef.current = scrubRatioToPos(ratio, max)
+      content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+      if (voiceActiveRef.current) syncVoiceCursor()
+    },
+    [syncVoiceCursor],
+  )
+
   const changeSpeed = useCallback(
     (delta: number) => {
       setSpeed((prev) => clampSpeed(prev + delta))
@@ -769,13 +785,47 @@ function Prompter({ script }: { script: Script }) {
         <div aria-hidden className="absolute inset-0 bg-ls-black/55" />
       )}
 
-      {/* Progress bar: hairline at the top */}
-      <div className="absolute inset-x-0 top-0 z-20 h-0.5 bg-ls-white/10">
-        <div
-          ref={progressRef}
-          className="h-full w-full origin-left bg-ls-blue"
-          style={{ transform: 'scaleX(0)' }}
-        />
+      {/* Progress bar: hairline at the top; scrubbable while paused */}
+      <div
+        className="absolute inset-x-0 top-0 z-20 h-3 cursor-pointer"
+        role="slider"
+        tabIndex={0}
+        aria-label={t('prompter.scrub')}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(progressPct * 100)}
+        onPointerDown={(e) => {
+          if (playing) return
+          e.currentTarget.setPointerCapture(e.pointerId)
+          scrubTo(e.clientX, e.currentTarget)
+        }}
+        onPointerMove={(e) => {
+          if (playing || e.buttons === 0) return
+          scrubTo(e.clientX, e.currentTarget)
+        }}
+        onKeyDown={(e) => {
+          if (playing) return
+          const stage = stageRef.current
+          const content = contentRef.current
+          if (!stage || !content) return
+          const max = Math.max(0, content.scrollHeight - stage.clientHeight)
+          if (e.key === 'ArrowRight') {
+            posRef.current = Math.min(max, posRef.current + max * 0.02)
+            content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+          }
+          if (e.key === 'ArrowLeft') {
+            posRef.current = Math.max(0, posRef.current - max * 0.02)
+            content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
+          }
+        }}
+      >
+        <div className="relative top-0 h-0.5 bg-ls-white/10">
+          <div
+            ref={progressRef}
+            className="h-full w-full origin-left bg-ls-blue"
+            style={{ transform: 'scaleX(0)' }}
+          />
+        </div>
       </div>
 
       {/* Mirroring for physical teleprompter rigs: applied to the whole stage */}
