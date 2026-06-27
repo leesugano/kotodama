@@ -15,10 +15,21 @@ import { Logo } from '../components/Logo'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { authClient } from '../lib/auth/client'
 import { t } from '../lib/i18n'
+import {
+  docxToText,
+  downloadText,
+  exportBackup,
+  filenameForBackup,
+  mergeBackup,
+  parseBackup,
+  scriptToTxt,
+  txtToScript,
+} from '../lib/import-export'
 import { getScriptRepository } from '../lib/scripts/repository'
 import type { Script } from '../lib/scripts/types'
 import { loadCurrentScriptId, saveCurrentScriptId } from '../lib/settings'
 import {
+  cleanText,
   countWords,
   deriveTitle,
   estimateSeconds,
@@ -49,6 +60,14 @@ function EditorPage() {
     'idle' | 'saving' | 'saved' | 'error'
   >('idle')
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [query, setQuery] = useState('')
+  const importInputRef = useRef<HTMLInputElement>(null)
+  const restoreInputRef = useRef<HTMLInputElement>(null)
+  const [restorePrompt, setRestorePrompt] = useState<{
+    added: number
+    updated: number
+    toSave: Script[]
+  } | null>(null)
 
   const metaRef = useRef({ createdAt: 0, customTitle: false, title: '' })
   const contentRef = useRef('')
@@ -263,9 +282,85 @@ function EditorPage() {
     navigate({ to: '/prompter', search: { id } })
   }, [persist, navigate])
 
+  const handleExport = useCallback(() => {
+    if (!currentIdRef.current) return
+    const title = metaRef.current.customTitle
+      ? metaRef.current.title
+      : deriveTitle(contentRef.current)
+    downloadText(
+      `${title || 'script'}.txt`,
+      scriptToTxt({ content: contentRef.current }),
+    )
+  }, [])
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      try {
+        const text = file.name.toLowerCase().endsWith('.docx')
+          ? await docxToText(file)
+          : await file.text()
+        await flushPending()
+        const input = txtToScript(file.name, text)
+        const script: Script = {
+          id: crypto.randomUUID(),
+          title: input.title,
+          content: input.content,
+          customTitle: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }
+        await getScriptRepository().save(script)
+        setScripts((prev) => sortByUpdated([script, ...prev]))
+        await selectScript(script)
+      } catch {
+        window.alert(t('editor.importError'))
+      }
+    },
+    [flushPending, selectScript],
+  )
+
+  const handleBackup = useCallback(async () => {
+    const all = await getScriptRepository().list()
+    downloadText(
+      filenameForBackup(new Date()),
+      exportBackup(all),
+      'application/json',
+    )
+  }, [])
+
+  const handleRestoreFile = useCallback(async (file: File) => {
+    const parsed = parseBackup(await file.text())
+    if (!parsed.ok) {
+      window.alert(t('editor.importError'))
+      return
+    }
+    const existing = await getScriptRepository().list()
+    const { toSave, added, updated } = mergeBackup(existing, parsed.scripts)
+    if (toSave.length === 0) return
+    setRestorePrompt({ added, updated, toSave })
+  }, [])
+
+  const confirmRestore = useCallback(async () => {
+    if (!restorePrompt) return
+    await getScriptRepository().saveMany(restorePrompt.toSave)
+    const list = await getScriptRepository().list()
+    setScripts(list)
+    setRestorePrompt(null)
+  }, [restorePrompt])
+
   const words = countWords(content)
   const duration = formatDuration(estimateSeconds(words))
   const hasText = words > 0
+
+  const visibleScripts = query.trim()
+    ? scripts.filter((s) => {
+        const q = query.toLowerCase()
+        return (
+          s.title.toLowerCase().includes(q) ||
+          s.content.toLowerCase().includes(q)
+        )
+      })
+    : scripts
 
   const sidebar = (
     <>
@@ -283,13 +378,52 @@ function EditorPage() {
           <Plus size={18} strokeWidth={1.5} aria-hidden />
         </button>
       </div>
+      <div className="border-b border-line px-3 py-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('editor.search')}
+          aria-label={t('editor.search')}
+          className="w-full rounded-input border border-line bg-surface px-2 py-1.5 text-sm text-primary outline-none focus:border-ls-blue"
+        />
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+            className="text-secondary hover:text-primary"
+          >
+            {t('editor.import')}
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            className="text-secondary hover:text-primary"
+          >
+            {t('editor.export')}
+          </button>
+          <button
+            type="button"
+            onClick={handleBackup}
+            className="text-secondary hover:text-primary"
+          >
+            {t('editor.backup')}
+          </button>
+          <button
+            type="button"
+            onClick={() => restoreInputRef.current?.click()}
+            className="text-secondary hover:text-primary"
+          >
+            {t('editor.restore')}
+          </button>
+        </div>
+      </div>
       <ul className="flex-1 overflow-y-auto py-2">
-        {scripts.length === 0 && (
+        {visibleScripts.length === 0 && (
           <li className="px-4 py-6 text-sm text-secondary">
-            {t('editor.empty')}
+            {query.trim() ? t('editor.noMatches') : t('editor.empty')}
           </li>
         )}
-        {scripts.map((script) => {
+        {visibleScripts.map((script) => {
           const isActive = script.id === currentId
           const preview = script.content
             .split('\n')
@@ -487,6 +621,18 @@ function EditorPage() {
             placeholder={loaded ? t('editor.placeholder') : ''}
             aria-label={t('editor.scriptLabel')}
             className="flex-1 resize-none border-0 bg-transparent py-6 text-lg leading-relaxed text-primary outline-none placeholder:text-secondary"
+            onPaste={(e) => {
+              e.preventDefault()
+              const text = cleanText(e.clipboardData.getData('text/plain'))
+              const el = e.currentTarget
+              const start = el.selectionStart ?? content.length
+              const end = el.selectionEnd ?? content.length
+              const next = content.slice(0, start) + text + content.slice(end)
+              handleChange(next)
+              requestAnimationFrame(() => {
+                el.selectionStart = el.selectionEnd = start + text.length
+              })
+            }}
           />
         </main>
 
@@ -515,6 +661,9 @@ function EditorPage() {
                 <span className="text-ls-blue">· {t('editor.saveError')}</span>
               )}
             </p>
+            <span className="hidden text-xs text-secondary sm:block">
+              {t('editor.markerHelp')}
+            </span>
             <button
               type="button"
               onClick={handleStart}
@@ -528,6 +677,56 @@ function EditorPage() {
         </footer>
       </div>
 
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".txt,.docx"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) handleImportFile(f)
+          e.target.value = ''
+        }}
+      />
+      <input
+        ref={restoreInputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) handleRestoreFile(f)
+          e.target.value = ''
+        }}
+      />
+      {restorePrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ls-black/40 px-4">
+          <div className="w-full max-w-sm rounded-card bg-surface p-5">
+            <p className="text-sm text-primary">
+              {t('editor.restoreConfirm', {
+                added: restorePrompt.added,
+                updated: restorePrompt.updated,
+              })}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRestorePrompt(null)}
+                className="rounded-btn px-3 py-1.5 text-sm text-secondary hover:text-primary"
+              >
+                {t('editor.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={confirmRestore}
+                className="rounded-btn bg-ls-blue px-3 py-1.5 text-sm text-ls-white hover:bg-ls-blue-pressed"
+              >
+                {t('editor.restore')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <InstallPrompt />
     </div>
   )
