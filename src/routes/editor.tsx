@@ -9,7 +9,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { InstallPrompt } from '../components/InstallPrompt'
 import { Logo } from '../components/Logo'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -362,7 +362,7 @@ function EditorPage() {
     setRestorePrompt(null)
   }, [restorePrompt])
 
-  const words = layoutScript(content).words.length
+  const words = useMemo(() => layoutScript(content).words.length, [content])
   const duration = formatDuration(estimateSeconds(words, wpm))
   const hasText = words > 0
 
@@ -404,28 +404,28 @@ function EditorPage() {
           <button
             type="button"
             onClick={() => importInputRef.current?.click()}
-            className="text-secondary hover:text-primary"
+            className="text-secondary transition-colors duration-[140ms] hover:text-primary"
           >
             {t('editor.import')}
           </button>
           <button
             type="button"
             onClick={handleExport}
-            className="text-secondary hover:text-primary"
+            className="text-secondary transition-colors duration-[140ms] hover:text-primary"
           >
             {t('editor.export')}
           </button>
           <button
             type="button"
             onClick={handleBackup}
-            className="text-secondary hover:text-primary"
+            className="text-secondary transition-colors duration-[140ms] hover:text-primary"
           >
             {t('editor.backup')}
           </button>
           <button
             type="button"
             onClick={() => restoreInputRef.current?.click()}
-            className="text-secondary hover:text-primary"
+            className="text-secondary transition-colors duration-[140ms] hover:text-primary"
           >
             {t('editor.restore')}
           </button>
@@ -667,8 +667,8 @@ function EditorPage() {
                     onChange={(e) => changeWpm(Number(e.target.value))}
                     aria-label={t('editor.wpmLabel')}
                     className="w-12 rounded-btn bg-surface-raised px-1 py-0.5 text-right text-sm tabular-nums text-secondary outline-none focus:text-primary"
-                  />
-                  {' wpm'}
+                  />{' '}
+                  {t('editor.wpmUnit')}
                 </>
               ) : (
                 t('editor.startHint')
@@ -737,7 +737,7 @@ function EditorPage() {
               <button
                 type="button"
                 onClick={() => setRestorePrompt(null)}
-                className="rounded-btn px-3 py-1.5 text-sm text-secondary hover:text-primary"
+                className="rounded-btn px-3 py-1.5 text-sm text-secondary transition-colors duration-[140ms] hover:text-primary"
               >
                 {t('editor.cancel')}
               </button>

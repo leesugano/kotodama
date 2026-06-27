@@ -825,7 +825,7 @@ function Prompter({ script }: { script: Script }) {
 
       {/* Progress bar: hairline at the top; scrubbable while paused */}
       <div
-        className="absolute inset-x-0 top-0 z-20 h-3 cursor-pointer"
+        className={`absolute inset-x-0 top-0 z-20 h-3 ${playing ? '' : 'cursor-pointer'}`}
         role="slider"
         tabIndex={0}
         aria-label={t('prompter.scrub')}
@@ -855,6 +855,7 @@ function Prompter({ script }: { script: Script }) {
             posRef.current = Math.max(0, posRef.current - max * 0.02)
             content.style.transform = `translate3d(0, ${-posRef.current}px, 0)`
           }
+          if (voiceActiveRef.current) syncVoiceCursor()
         }}
       >
         <div className="relative top-0 h-0.5 bg-ls-white/10">
